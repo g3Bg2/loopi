@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 
 // Fix for Linux sandbox issues - must be before any app initialization
 if (process.platform === "linux") {
@@ -16,6 +16,8 @@ if (require("electron-squirrel-startup")) {
   app.quit();
 }
 
+let browserWin: BrowserWindow | null = null;
+
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -23,6 +25,8 @@ const createWindow = (): void => {
     width: 1100,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
+      webviewTag: true,
     },
   });
 
@@ -32,6 +36,69 @@ const createWindow = (): void => {
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
 };
+
+ipcMain.handle("browser:open", async (_event, url: string) => {
+  if (browserWin) return;
+
+  browserWin = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: false,
+    },
+  });
+
+  await browserWin.loadURL(url);
+  browserWin.on("closed", () => {
+    browserWin = null;
+  });
+});
+
+ipcMain.handle("browser:close", () => {
+  if (browserWin) {
+    browserWin.close();
+    browserWin = null;
+  }
+});
+
+ipcMain.handle("browser:navigate", async (_event, url: string) => {
+  if (browserWin) {
+    await browserWin.loadURL(url);
+  }
+});
+
+ipcMain.handle("browser:runStep", async (_event, step) => {
+  if (!browserWin) return;
+
+  const wc = browserWin.webContents;
+
+  switch (step.type) {
+    case "navigate":
+      await wc.loadURL(step.value);
+      break;
+    case "click":
+      await wc.executeJavaScript(`
+        document.querySelector("${step.selector}")?.click();
+      `);
+      break;
+    case "type":
+      await wc.executeJavaScript(`
+        const el = document.querySelector("${step.selector}");
+        if (el) { el.focus(); el.value = "${step.value}"; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      `);
+      break;
+    case "wait":
+      await new Promise((res) => setTimeout(res, parseInt(step.value) * 1000));
+      break;
+    case "screenshot":
+      const img = await wc.capturePage();
+      return img.toPNG().toString("base64"); // send back screenshot if needed
+    case "extract":
+      return await wc.executeJavaScript(`
+        document.querySelector("${step.selector}")?.innerText || "";
+      `);
+  }
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
