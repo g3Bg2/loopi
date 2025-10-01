@@ -539,7 +539,11 @@ export function AutomationBuilder({
 
         {/* Steps Editor and Instructions */}
         <div className="w-96 border-l border-border bg-card flex flex-col">
-          <Tabs defaultValue="steps" className="flex-1 flex flex-col">
+          <Tabs
+            defaultValue="steps"
+            className="flex-1 flex flex-col"
+            value={isAutomationRunning ? "instructions" : undefined}
+          >
             <TabsList className="grid w-full grid-cols-3 m-4 mb-0">
               <TabsTrigger value="steps">Steps</TabsTrigger>
               <TabsTrigger value="instructions">Instructions</TabsTrigger>
@@ -562,7 +566,10 @@ export function AutomationBuilder({
                         addStep(stepType.value as AutomationStep["type"])
                       }
                       className="h-auto p-2 flex flex-col items-center gap-1"
-                      disabled={isAutomationRunning}
+                      disabled={
+                        isAutomationRunning ||
+                        (steps.length === 0 && stepType.value !== "navigate")
+                      }
                     >
                       <stepType.icon className="h-4 w-4" />
                       <span className="text-xs">{stepType.label}</span>
