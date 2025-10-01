@@ -33,11 +33,49 @@ export interface Automation {
 
 export interface AutomationStep {
   id: string;
-  type: "navigate" | "click" | "type" | "wait" | "screenshot" | "extract";
+  type:
+    | "navigate"
+    | "click"
+    | "type"
+    | "wait"
+    | "screenshot"
+    | "extract"
+    | "extractWithLogic"
+    | "repeat"
+    | "apiCall"
+    | "conditional"
+    | "scroll"
+    | "selectOption"
+    | "fileUpload"
+    | "hover";
+  description: string;
   selector?: string;
   value?: string;
   credentialId?: string;
-  description: string;
+  // For extractWithLogic
+  condition?: "equals" | "contains" | "greaterThan" | "lessThan";
+  expectedValue?: string | number;
+  // For repeat
+  repeatCount?: number;
+  subSteps?: AutomationStep[];
+  // For apiCall
+  method?: "GET" | "POST";
+  url?: string;
+  body?: string;
+  headers?: Record<string, string>;
+  storeKey?: string;
+  // For conditional
+  conditionType?: "elementExists" | "valueMatches";
+  thenSteps?: AutomationStep[];
+  elseSteps?: AutomationStep[];
+  // For scroll
+  scrollType?: "toElement" | "byAmount";
+  scrollAmount?: number;
+  // For selectOption
+  optionValue?: string;
+  optionIndex?: number;
+  // For fileUpload
+  filePath?: string;
 }
 
 export interface Credential {

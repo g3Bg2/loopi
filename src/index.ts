@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain } from "electron";
-
+import axios from "axios";
 // Fix for Linux sandbox issues - must be before any app initialization
 if (process.platform === "linux") {
   app.commandLine.appendSwitch("--no-sandbox");
@@ -94,13 +94,140 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       break;
     case "screenshot":
       const img = await wc.capturePage();
-      return img.toPNG().toString("base64"); // send back screenshot if needed
+      return img.toPNG().toString("base64");
     case "extract":
       return await wc.executeJavaScript(`
         document.querySelector("${step.selector}")?.innerText || "";
       `);
+    case "extractWithLogic":
+      const extractedValue = await wc.executeJavaScript(`
+        document.querySelector("${step.selector}")?.innerText || "";
+      `);
+      let conditionMet = false;
+      if (step.condition === "equals") {
+        conditionMet = extractedValue === step.expectedValue;
+      } else if (step.condition === "contains") {
+        conditionMet = extractedValue.includes(step.expectedValue);
+      } else if (step.condition === "greaterThan") {
+        conditionMet =
+          parseFloat(extractedValue) > parseFloat(step.expectedValue);
+      } else if (step.condition === "lessThan") {
+        conditionMet =
+          parseFloat(extractedValue) < parseFloat(step.expectedValue);
+      }
+      return { value: extractedValue, conditionMet };
+    case "repeat":
+      const elements = await wc.executeJavaScript(`
+        Array.from(document.querySelectorAll("${step.selector}")).slice(0, ${step.repeatCount || Infinity});
+      `);
+      const results = [];
+      for (let i = 0; i < elements.length; i++) {
+        for (const subStep of step.subSteps || []) {
+          const result = await executeSubStep(wc, subStep, i);
+          results.push(result);
+        }
+      }
+      return results;
+    case "apiCall":
+      try {
+        const response = await axios({
+          method: step.method || "GET",
+          url: step.url,
+          data: step.body ? JSON.parse(step.body) : undefined,
+          headers: step.headers || {},
+        });
+        return response.data;
+      } catch (error) {
+        console.error("API call failed:", error);
+        throw error;
+      }
+    case "conditional":
+      let conditionResult = false;
+      if (step.conditionType === "elementExists") {
+        conditionResult = await wc.executeJavaScript(`
+          !!document.querySelector("${step.selector}");
+        `);
+      } else if (step.conditionType === "valueMatches") {
+        const value = await wc.executeJavaScript(`
+          document.querySelector("${step.selector}")?.innerText || "";
+        `);
+        conditionResult = value === step.expectedValue;
+      }
+      const stepsToExecute = conditionResult ? step.thenSteps : step.elseSteps;
+      const conditionalResults = [];
+      for (const subStep of stepsToExecute || []) {
+        const result = await executeSubStep(wc, subStep);
+        conditionalResults.push(result);
+      }
+      return conditionalResults;
+    case "scroll":
+      if (step.scrollType === "toElement") {
+        await wc.executeJavaScript(`
+          const el = document.querySelector("${step.selector}");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        `);
+      } else if (step.scrollType === "byAmount") {
+        await wc.executeJavaScript(`
+          window.scrollBy(0, ${step.scrollAmount || 0});
+        `);
+      }
+      break;
+    case "selectOption":
+      await wc.executeJavaScript(`
+        const select = document.querySelector("${step.selector}");
+        if (select) {
+          ${
+            step.optionValue
+              ? `select.value = "${step.optionValue}";`
+              : `select.selectedIndex = ${step.optionIndex || 0};`
+          }
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      `);
+      break;
+    case "fileUpload":
+      await wc.executeJavaScript(`
+        const input = document.querySelector("${step.selector}");
+        if (input) {
+          const file = new File([""], "${step.filePath}", { type: "text/plain" });
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(file);
+          input.files = dataTransfer.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      `);
+      break;
+    case "hover":
+      await wc.executeJavaScript(`
+        const el = document.querySelector("${step.selector}");
+        if (el) {
+          const event = new MouseEvent('mouseover', { bubbles: true });
+          el.dispatchEvent(event);
+        }
+      `);
+      break;
   }
 });
+
+async function executeSubStep(wc: any, step: any, index?: number) {
+  switch (step.type) {
+    case "click":
+      return await wc.executeJavaScript(`
+        document.querySelectorAll("${step.selector}")[${index || 0}]?.click();
+      `);
+    case "type":
+      return await wc.executeJavaScript(`
+        const el = document.querySelectorAll("${step.selector}")[${index || 0}];
+        if (el) { el.focus(); el.value = "${step.value}"; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      `);
+    case "extract":
+      return await wc.executeJavaScript(`
+        document.querySelectorAll("${step.selector}")[${index || 0}]?.innerText || "";
+      `);
+    default:
+      return null;
+  }
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

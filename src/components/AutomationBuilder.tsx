@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardDescription,
-  CardTitle,
-} from "./ui/card";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
@@ -35,14 +29,19 @@ import {
   Download,
   GripVertical,
   Shield,
-  Eye,
-  EyeOff,
   Target,
   Zap,
   Pause,
   Square,
   ArrowUp,
   ArrowDown,
+  List,
+  Plug,
+  Code,
+  ScrollText,
+  ListOrdered,
+  Upload,
+  Pointer,
 } from "lucide-react";
 import type { Automation, AutomationStep, Credential } from "../app";
 
@@ -138,7 +137,55 @@ export function AutomationBuilder({
       value: "extract",
       label: "Extract",
       icon: Download,
-      description: "Extract data",
+      description: "Extract text",
+    },
+    {
+      value: "extractWithLogic",
+      label: "Extract with Logic",
+      icon: Code,
+      description: "Extract and apply logic",
+    },
+    {
+      value: "repeat",
+      label: "Repeat",
+      icon: List,
+      description: "Repeat for list of elements",
+    },
+    {
+      value: "apiCall",
+      label: "API Call",
+      icon: Plug,
+      description: "Make an API request",
+    },
+    {
+      value: "conditional",
+      label: "Conditional",
+      icon: Code,
+      description: "Conditional action",
+    },
+    {
+      value: "scroll",
+      label: "Scroll",
+      icon: ScrollText,
+      description: "Scroll to element or amount",
+    },
+    {
+      value: "selectOption",
+      label: "Select Option",
+      icon: ListOrdered,
+      description: "Select dropdown option",
+    },
+    {
+      value: "fileUpload",
+      label: "File Upload",
+      icon: Upload,
+      description: "Upload a file",
+    },
+    {
+      value: "hover",
+      label: "Hover",
+      icon: Pointer,
+      description: "Hover over an element",
     },
   ];
 
@@ -149,6 +196,19 @@ export function AutomationBuilder({
       description: `${stepTypes.find((s) => s.value === type)?.label} step`,
       selector: type === "navigate" ? "" : "body",
       value: type === "navigate" ? "https://" : "",
+      ...(type === "extractWithLogic"
+        ? { condition: "equals", expectedValue: "" }
+        : {}),
+      ...(type === "repeat" ? { repeatCount: 1, subSteps: [] } : {}),
+      ...(type === "apiCall"
+        ? { method: "GET", url: "", headers: {}, storeKey: "" }
+        : {}),
+      ...(type === "conditional"
+        ? { conditionType: "elementExists", thenSteps: [], elseSteps: [] }
+        : {}),
+      ...(type === "scroll" ? { scrollType: "toElement" } : {}),
+      ...(type === "selectOption" ? { optionValue: "" } : {}),
+      ...(type === "fileUpload" ? { filePath: "" } : {}),
     };
     setSteps([...steps, newStep]);
   };
@@ -166,16 +226,97 @@ export function AutomationBuilder({
   const moveStep = (stepId: string, direction: "up" | "down") => {
     const index = steps.findIndex((step) => step.id === stepId);
     if (index === -1) return;
-
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= steps.length) return;
-
+    if (
+      newIndex < 0 ||
+      newIndex >= steps.length ||
+      (direction === "up" && index === 1) ||
+      (direction === "down" && index === 0)
+    )
+      return;
     const newSteps = [...steps];
     [newSteps[index], newSteps[newIndex]] = [
       newSteps[newIndex],
       newSteps[index],
     ];
     setSteps(newSteps);
+  };
+
+  const addSubStep = (parentStepId: string, type: AutomationStep["type"]) => {
+    const newSubStep: AutomationStep = {
+      id: Date.now().toString(),
+      type,
+      description: `${stepTypes.find((s) => s.value === type)?.label} sub-step`,
+      selector: "body",
+      value: "",
+    };
+    setSteps(
+      steps.map((step) =>
+        step.id === parentStepId &&
+        (step.type === "repeat" || step.type === "conditional")
+          ? {
+              ...step,
+              [step.type === "repeat"
+                ? "subSteps"
+                : step.conditionType === "elementExists"
+                  ? "thenSteps"
+                  : "elseSteps"]: [
+                ...((step.type === "repeat" ? step.subSteps : step.thenSteps) ||
+                  []),
+                newSubStep,
+              ],
+            }
+          : step
+      )
+    );
+  };
+
+  const updateSubStep = (
+    parentStepId: string,
+    subStepId: string,
+    updates: Partial<AutomationStep>
+  ) => {
+    setSteps(
+      steps.map((step) =>
+        step.id === parentStepId &&
+        (step.type === "repeat" || step.type === "conditional")
+          ? {
+              ...step,
+              [step.type === "repeat"
+                ? "subSteps"
+                : step.conditionType === "elementExists"
+                  ? "thenSteps"
+                  : "elseSteps"]: (step.type === "repeat"
+                ? step.subSteps
+                : step.thenSteps
+              )?.map((subStep) =>
+                subStep.id === subStepId ? { ...subStep, ...updates } : subStep
+              ),
+            }
+          : step
+      )
+    );
+  };
+
+  const removeSubStep = (parentStepId: string, subStepId: string) => {
+    setSteps(
+      steps.map((step) =>
+        step.id === parentStepId &&
+        (step.type === "repeat" || step.type === "conditional")
+          ? {
+              ...step,
+              [step.type === "repeat"
+                ? "subSteps"
+                : step.conditionType === "elementExists"
+                  ? "thenSteps"
+                  : "elseSteps"]: (step.type === "repeat"
+                ? step.subSteps
+                : step.thenSteps
+              )?.filter((subStep) => subStep.id !== subStepId),
+            }
+          : step
+      )
+    );
   };
 
   const handleSave = () => {
@@ -216,19 +357,25 @@ export function AutomationBuilder({
   };
 
   const closeBrowser = async () => {
-    await (window as any).electronAPI.closeBrowser();
-    setIsBrowserOpen(false);
-    setIsAutomationRunning(false);
-    setCurrentStepIndex(-1);
-    console.log("Browser closed");
+    try {
+      await (window as any).electronAPI.closeBrowser();
+      setIsBrowserOpen(false);
+      setIsAutomationRunning(false);
+      setCurrentStepIndex(-1);
+      console.log("Browser closed");
+    } catch (err) {
+      console.error("Failed to close browser", err);
+    }
   };
 
   const executeStep = async (step: AutomationStep, index: number) => {
     setCurrentStepIndex(index);
     try {
-      await (window as any).electronAPI.runStep(step);
+      const result = await (window as any).electronAPI.runStep(step);
+      return result; // For potential use in future steps
     } catch (err) {
       console.error("Step execution failed:", err);
+      throw err;
     }
   };
 
@@ -422,9 +569,9 @@ export function AutomationBuilder({
                             size="sm"
                             onClick={() => moveStep(step.id, "down")}
                             disabled={
+                              index === 0 ||
                               index === steps.length - 1 ||
-                              isAutomationRunning ||
-                              index === 0
+                              isAutomationRunning
                             }
                           >
                             <ArrowDown className="h-3 w-3" />
@@ -446,9 +593,7 @@ export function AutomationBuilder({
                         <Input
                           value={step.description}
                           onChange={(e) =>
-                            updateStep(step.id, {
-                              description: e.target.value,
-                            })
+                            updateStep(step.id, { description: e.target.value })
                           }
                           className="text-xs"
                           placeholder="Step description"
@@ -461,9 +606,7 @@ export function AutomationBuilder({
                           <Input
                             value={step.value || ""}
                             onChange={(e) =>
-                              updateStep(step.id, {
-                                value: e.target.value,
-                              })
+                              updateStep(step.id, { value: e.target.value })
                             }
                             placeholder="https://google.com"
                             className="text-xs"
@@ -473,15 +616,20 @@ export function AutomationBuilder({
                       )}
                       {(step.type === "click" ||
                         step.type === "type" ||
-                        step.type === "extract") && (
+                        step.type === "extract" ||
+                        step.type === "extractWithLogic" ||
+                        step.type === "repeat" ||
+                        step.type === "conditional" ||
+                        step.type === "scroll" ||
+                        step.type === "selectOption" ||
+                        step.type === "fileUpload" ||
+                        step.type === "hover") && (
                         <div className="space-y-2">
                           <Label className="text-xs">CSS Selector</Label>
                           <Input
                             value={step.selector || ""}
                             onChange={(e) =>
-                              updateStep(step.id, {
-                                selector: e.target.value,
-                              })
+                              updateStep(step.id, { selector: e.target.value })
                             }
                             placeholder="button, .class, #id"
                             className="text-xs"
@@ -490,19 +638,19 @@ export function AutomationBuilder({
                         </div>
                       )}
                       {step.type === "type" && (
-                        <div className="space-y-2">
-                          <Label className="text-xs">Text to Type</Label>
-                          <Input
-                            value={step.value || ""}
-                            onChange={(e) =>
-                              updateStep(step.id, {
-                                value: e.target.value,
-                              })
-                            }
-                            placeholder="Text to enter"
-                            className="text-xs"
-                            disabled={isAutomationRunning}
-                          />
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Text to Type</Label>
+                            <Input
+                              value={step.value || ""}
+                              onChange={(e) =>
+                                updateStep(step.id, { value: e.target.value })
+                              }
+                              placeholder="Text to enter"
+                              className="text-xs"
+                              disabled={isAutomationRunning}
+                            />
+                          </div>
                           {credentials.length > 0 && (
                             <div className="space-y-2">
                               <Label className="text-xs">
@@ -533,7 +681,7 @@ export function AutomationBuilder({
                               </Select>
                             </div>
                           )}
-                        </div>
+                        </>
                       )}
                       {step.type === "wait" && (
                         <div className="space-y-2">
@@ -542,12 +690,534 @@ export function AutomationBuilder({
                             type="number"
                             value={step.value || "1"}
                             onChange={(e) =>
-                              updateStep(step.id, {
-                                value: e.target.value,
-                              })
+                              updateStep(step.id, { value: e.target.value })
                             }
                             className="text-xs"
                             min="1"
+                            disabled={isAutomationRunning}
+                          />
+                        </div>
+                      )}
+                      {step.type === "extractWithLogic" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Condition</Label>
+                            <Select
+                              value={step.condition || "equals"}
+                              onValueChange={(value) =>
+                                updateStep(step.id, { condition: value as any })
+                              }
+                              disabled={isAutomationRunning}
+                            >
+                              <SelectTrigger className="text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="equals">Equals</SelectItem>
+                                <SelectItem value="contains">
+                                  Contains
+                                </SelectItem>
+                                <SelectItem value="greaterThan">
+                                  Greater Than
+                                </SelectItem>
+                                <SelectItem value="lessThan">
+                                  Less Than
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Expected Value</Label>
+                            <Input
+                              value={step.expectedValue || ""}
+                              onChange={(e) =>
+                                updateStep(step.id, {
+                                  expectedValue: e.target.value,
+                                })
+                              }
+                              placeholder="Expected value"
+                              className="text-xs"
+                              disabled={isAutomationRunning}
+                            />
+                          </div>
+                        </>
+                      )}
+                      {step.type === "repeat" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Repeat Count</Label>
+                            <Input
+                              type="number"
+                              value={step.repeatCount || 1}
+                              onChange={(e) =>
+                                updateStep(step.id, {
+                                  repeatCount: parseInt(e.target.value) || 1,
+                                })
+                              }
+                              className="text-xs"
+                              min="1"
+                              disabled={isAutomationRunning}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Sub-Steps</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {["click", "type", "extract"].map((subType) => (
+                                <Button
+                                  key={subType}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    addSubStep(
+                                      step.id,
+                                      subType as AutomationStep["type"]
+                                    )
+                                  }
+                                  className="h-auto p-2"
+                                  disabled={isAutomationRunning}
+                                >
+                                  {subType}
+                                </Button>
+                              ))}
+                            </div>
+                            {(step.subSteps || []).map((subStep) => (
+                              <Card key={subStep.id} className="mt-2">
+                                <CardContent className="p-2 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium">
+                                      {subStep.type}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        removeSubStep(step.id, subStep.id)
+                                      }
+                                      disabled={isAutomationRunning}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    value={subStep.description}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Sub-step description"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  <Input
+                                    value={subStep.selector || ""}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        selector: e.target.value,
+                                      })
+                                    }
+                                    placeholder="CSS Selector"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  {subStep.type === "type" && (
+                                    <Input
+                                      value={subStep.value || ""}
+                                      onChange={(e) =>
+                                        updateSubStep(step.id, subStep.id, {
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Text to type"
+                                      className="text-xs"
+                                      disabled={isAutomationRunning}
+                                    />
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {step.type === "apiCall" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Method</Label>
+                            <Select
+                              value={step.method || "GET"}
+                              onValueChange={(value) =>
+                                updateStep(step.id, { method: value as any })
+                              }
+                              disabled={isAutomationRunning}
+                            >
+                              <SelectTrigger className="text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="GET">GET</SelectItem>
+                                <SelectItem value="POST">POST</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">URL</Label>
+                            <Input
+                              value={step.url || ""}
+                              onChange={(e) =>
+                                updateStep(step.id, { url: e.target.value })
+                              }
+                              placeholder="https://api.example.com"
+                              className="text-xs"
+                              disabled={isAutomationRunning}
+                            />
+                          </div>
+                          {step.method === "POST" && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                Request Body (JSON)
+                              </Label>
+                              <Textarea
+                                value={step.body || ""}
+                                onChange={(e) =>
+                                  updateStep(step.id, { body: e.target.value })
+                                }
+                                placeholder='{"key": "value"}'
+                                className="text-xs"
+                                disabled={isAutomationRunning}
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label className="text-xs">Store Response As</Label>
+                            <Input
+                              value={step.storeKey || ""}
+                              onChange={(e) =>
+                                updateStep(step.id, {
+                                  storeKey: e.target.value,
+                                })
+                              }
+                              placeholder="response_key"
+                              className="text-xs"
+                              disabled={isAutomationRunning}
+                            />
+                          </div>
+                        </>
+                      )}
+                      {step.type === "conditional" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Condition Type</Label>
+                            <Select
+                              value={step.conditionType || "elementExists"}
+                              onValueChange={(value) =>
+                                updateStep(step.id, {
+                                  conditionType: value as any,
+                                })
+                              }
+                              disabled={isAutomationRunning}
+                            >
+                              <SelectTrigger className="text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="elementExists">
+                                  Element Exists
+                                </SelectItem>
+                                <SelectItem value="valueMatches">
+                                  Value Matches
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {step.conditionType === "valueMatches" && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">Expected Value</Label>
+                              <Input
+                                value={step.expectedValue || ""}
+                                onChange={(e) =>
+                                  updateStep(step.id, {
+                                    expectedValue: e.target.value,
+                                  })
+                                }
+                                placeholder="Expected value"
+                                className="text-xs"
+                                disabled={isAutomationRunning}
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label className="text-xs">Then Steps</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {["click", "type", "extract"].map((subType) => (
+                                <Button
+                                  key={subType}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    addSubStep(
+                                      step.id,
+                                      subType as AutomationStep["type"]
+                                    )
+                                  }
+                                  className="h-auto p-2"
+                                  disabled={isAutomationRunning}
+                                >
+                                  {subType}
+                                </Button>
+                              ))}
+                            </div>
+                            {(step.thenSteps || []).map((subStep) => (
+                              <Card key={subStep.id} className="mt-2">
+                                <CardContent className="p-2 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium">
+                                      {subStep.type}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        removeSubStep(step.id, subStep.id)
+                                      }
+                                      disabled={isAutomationRunning}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    value={subStep.description}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Sub-step description"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  <Input
+                                    value={subStep.selector || ""}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        selector: e.target.value,
+                                      })
+                                    }
+                                    placeholder="CSS Selector"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  {subStep.type === "type" && (
+                                    <Input
+                                      value={subStep.value || ""}
+                                      onChange={(e) =>
+                                        updateSubStep(step.id, subStep.id, {
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Text to type"
+                                      className="text-xs"
+                                      disabled={isAutomationRunning}
+                                    />
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Else Steps</Label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {["click", "type", "extract"].map((subType) => (
+                                <Button
+                                  key={subType}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    addSubStep(
+                                      step.id,
+                                      subType as AutomationStep["type"]
+                                    )
+                                  }
+                                  className="h-auto p-2"
+                                  disabled={isAutomationRunning}
+                                >
+                                  {subType}
+                                </Button>
+                              ))}
+                            </div>
+                            {(step.elseSteps || []).map((subStep) => (
+                              <Card key={subStep.id} className="mt-2">
+                                <CardContent className="p-2 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium">
+                                      {subStep.type}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        removeSubStep(step.id, subStep.id)
+                                      }
+                                      disabled={isAutomationRunning}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <Input
+                                    value={subStep.description}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        description: e.target.value,
+                                      })
+                                    }
+                                    placeholder="Sub-step description"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  <Input
+                                    value={subStep.selector || ""}
+                                    onChange={(e) =>
+                                      updateSubStep(step.id, subStep.id, {
+                                        selector: e.target.value,
+                                      })
+                                    }
+                                    placeholder="CSS Selector"
+                                    className="text-xs"
+                                    disabled={isAutomationRunning}
+                                  />
+                                  {subStep.type === "type" && (
+                                    <Input
+                                      value={subStep.value || ""}
+                                      onChange={(e) =>
+                                        updateSubStep(step.id, subStep.id, {
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      placeholder="Text to type"
+                                      className="text-xs"
+                                      disabled={isAutomationRunning}
+                                    />
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {step.type === "scroll" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Scroll Type</Label>
+                            <Select
+                              value={step.scrollType || "toElement"}
+                              onValueChange={(value) =>
+                                updateStep(step.id, {
+                                  scrollType: value as any,
+                                })
+                              }
+                              disabled={isAutomationRunning}
+                            >
+                              <SelectTrigger className="text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="toElement">
+                                  To Element
+                                </SelectItem>
+                                <SelectItem value="byAmount">
+                                  By Amount
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {step.scrollType === "byAmount" && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                Scroll Amount (px)
+                              </Label>
+                              <Input
+                                type="number"
+                                value={step.scrollAmount || 0}
+                                onChange={(e) =>
+                                  updateStep(step.id, {
+                                    scrollAmount: parseInt(e.target.value) || 0,
+                                  })
+                                }
+                                className="text-xs"
+                                disabled={isAutomationRunning}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {step.type === "selectOption" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Option Selection</Label>
+                            <Select
+                              value={step.optionValue ? "value" : "index"}
+                              onValueChange={(value) =>
+                                updateStep(step.id, {
+                                  optionValue:
+                                    value === "value" ? "" : undefined,
+                                  optionIndex:
+                                    value === "index" ? 0 : undefined,
+                                })
+                              }
+                              disabled={isAutomationRunning}
+                            >
+                              <SelectTrigger className="text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="value">By Value</SelectItem>
+                                <SelectItem value="index">By Index</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {step.optionValue !== undefined ? (
+                            <div className="space-y-2">
+                              <Label className="text-xs">Option Value</Label>
+                              <Input
+                                value={step.optionValue || ""}
+                                onChange={(e) =>
+                                  updateStep(step.id, {
+                                    optionValue: e.target.value,
+                                  })
+                                }
+                                placeholder="Option value"
+                                className="text-xs"
+                                disabled={isAutomationRunning}
+                              />
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Label className="text-xs">Option Index</Label>
+                              <Input
+                                type="number"
+                                value={step.optionIndex || 0}
+                                onChange={(e) =>
+                                  updateStep(step.id, {
+                                    optionIndex: parseInt(e.target.value) || 0,
+                                  })
+                                }
+                                className="text-xs"
+                                min="0"
+                                disabled={isAutomationRunning}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {step.type === "fileUpload" && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">File Path</Label>
+                          <Input
+                            value={step.filePath || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, { filePath: e.target.value })
+                            }
+                            placeholder="/path/to/file"
+                            className="text-xs"
                             disabled={isAutomationRunning}
                           />
                         </div>
@@ -559,7 +1229,6 @@ export function AutomationBuilder({
             )}
           </div>
         </div>
-
         {/* Steps Editor and Instructions */}
         <div className="w-96 border-l border-border bg-card flex flex-col">
           <Tabs
@@ -614,11 +1283,6 @@ export function AutomationBuilder({
                     <Target className="h-4 w-4" />
                     Automation Instructions
                   </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowInstructions(!showInstructions)}
-                  ></Button>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {isAutomationRunning && (
@@ -709,6 +1373,26 @@ export function AutomationBuilder({
                               {step.type === "screenshot" &&
                                 "Taking screenshot..."}
                               {step.type === "extract" &&
+                                `Selector: ${step.selector}`}
+                              {step.type === "extractWithLogic" &&
+                                `Selector: ${step.selector}, Condition: ${step.condition}, Expected: ${step.expectedValue}`}
+                              {step.type === "repeat" &&
+                                `Selector: ${step.selector}, Count: ${step.repeatCount}, Sub-Steps: ${(step.subSteps || []).length}`}
+                              {step.type === "apiCall" &&
+                                `${step.method} ${step.url}, Store as: ${step.storeKey}`}
+                              {step.type === "conditional" &&
+                                `Condition: ${step.conditionType}, Selector: ${step.selector}`}
+                              {step.type === "scroll" &&
+                              step.scrollType === "toElement"
+                                ? `Scroll to: ${step.selector}`
+                                : `Scroll by: ${step.scrollAmount}px`}
+                              {step.type === "selectOption" &&
+                                (step.optionValue
+                                  ? `Select value: ${step.optionValue}`
+                                  : `Select index: ${step.optionIndex}`)}
+                              {step.type === "fileUpload" &&
+                                `File: ${step.filePath}`}
+                              {step.type === "hover" &&
                                 `Selector: ${step.selector}`}
                             </div>
                           </div>
@@ -815,6 +1499,7 @@ export function AutomationBuilder({
             </TabsContent>
           </Tabs>
         </div>
+        ;
       </div>
     </div>
   );
