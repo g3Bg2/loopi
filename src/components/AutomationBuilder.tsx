@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
+  CardDescription,
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
@@ -35,14 +35,14 @@ import {
   Download,
   GripVertical,
   Shield,
-  Monitor,
-  Smartphone,
   Eye,
   EyeOff,
   Target,
   Zap,
   Pause,
   Square,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { Automation, AutomationStep, Credential } from "../app";
 
@@ -68,15 +68,10 @@ export function AutomationBuilder({
     unit: "minutes" as "minutes" | "hours" | "days",
     value: "09:00",
   });
-  const [currentUrl, setCurrentUrl] = useState("https://example.com");
-  const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
-  const [isRecording, setIsRecording] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isAutomationRunning, setIsAutomationRunning] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [showInstructions, setShowInstructions] = useState(true);
-  const [browserWindowId, setBrowserWindowId] = useState<string | null>(null);
-  const browserRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     if (automation) {
@@ -175,16 +170,16 @@ export function AutomationBuilder({
         schedule.type === "manual"
           ? { type: "manual" }
           : schedule.type === "fixed"
-          ? { type: "fixed", value: schedule.value }
-          : {
-              type: "interval",
-              interval: schedule.interval,
-              unit: schedule.unit,
-            },
+            ? { type: "fixed", value: schedule.value }
+            : {
+                type: "interval",
+                interval: schedule.interval,
+                unit: schedule.unit,
+              },
       linkedCredentials: steps
         .filter((step) => step.credentialId)
         .map((step) => step.credentialId!)
-        .filter((id, index, arr) => arr.indexOf(id) === index), // Remove duplicates
+        .filter((id, index, arr) => arr.indexOf(id) === index),
       lastRun: automation?.lastRun,
     };
 
@@ -193,7 +188,7 @@ export function AutomationBuilder({
 
   const openBrowser = async () => {
     try {
-      await (window as any).electronAPI.openBrowser(currentUrl);
+      await (window as any).electronAPI.openBrowser("https://google.com");
       setIsBrowserOpen(true);
       console.log("Browser opened via Electron");
     } catch (err) {
@@ -209,17 +204,8 @@ export function AutomationBuilder({
     console.log("Browser closed");
   };
 
-  const navigateToUrl = async (url: string) => {
-    setCurrentUrl(url);
-    if (isBrowserOpen) {
-      await (window as any).electronAPI.navigate(url);
-      console.log(`Navigating browser window to: ${url}`);
-    }
-  };
-
   const executeStep = async (step: AutomationStep, index: number) => {
     setCurrentStepIndex(index);
-
     try {
       await (window as any).electronAPI.runStep(step);
     } catch (err) {
@@ -233,16 +219,18 @@ export function AutomationBuilder({
       return;
     }
 
+    if (!isBrowserOpen) {
+      await openBrowser();
+    }
+
     setIsAutomationRunning(true);
     setCurrentStepIndex(-1);
 
     try {
       for (let i = 0; i < steps.length; i++) {
         await executeStep(steps[i], i);
-        // Small delay between steps for visibility
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-
       alert("Automation completed successfully!");
     } catch (error) {
       console.error("Automation failed:", error);
@@ -264,15 +252,6 @@ export function AutomationBuilder({
     console.log("Automation stopped");
   };
 
-  const testAutomation = () => {
-    setIsRecording(true);
-    // Mock test execution
-    setTimeout(() => {
-      setIsRecording(false);
-      alert("Test completed successfully!");
-    }, 2000);
-  };
-
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -292,7 +271,6 @@ export function AutomationBuilder({
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             {!isBrowserOpen ? (
               <Button variant="outline" onClick={openBrowser}>
@@ -328,14 +306,6 @@ export function AutomationBuilder({
                 )}
               </>
             )}
-            <Button
-              variant="outline"
-              onClick={testAutomation}
-              disabled={isRecording}
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              {isRecording ? "Testing..." : "Test"}
-            </Button>
             <Button onClick={handleSave} disabled={!name.trim()}>
               <Save className="h-4 w-4 mr-2" />
               Save
@@ -346,203 +316,242 @@ export function AutomationBuilder({
 
       {/* Main Content */}
       <div className="flex-1 flex">
-        {/* Real Browser */}
-        <div className="flex-1 flex flex-col bg-muted/30">
-          <div className="border-b border-border bg-card p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === "desktop" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("desktop")}
-                >
-                  <Monitor className="h-4 w-4 mr-1" />
-                  Desktop
-                </Button>
-                <Button
-                  variant={viewMode === "mobile" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setViewMode("mobile")}
-                >
-                  <Smartphone className="h-4 w-4 mr-1" />
-                  Mobile
-                </Button>
-              </div>
-
-              <div className="flex-1 max-w-md">
-                <Input
-                  placeholder="Enter URL to navigate to"
-                  value={currentUrl}
-                  onChange={(e) => setCurrentUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      navigateToUrl(currentUrl);
-                    }
-                  }}
-                />
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateToUrl(currentUrl)}
-                disabled={!isBrowserOpen}
-              >
-                Navigate
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowInstructions(!showInstructions)}
-              >
-                {showInstructions ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 relative">
-            {!isBrowserOpen ? (
-              <div className="h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center space-y-4">
-                  <Globe className="h-16 w-16 mx-auto text-muted-foreground/50" />
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">No Browser Open</h3>
-                    <p className="text-sm">
-                      Click "Open Browser" to start automation
-                    </p>
-                  </div>
-                  <Button onClick={openBrowser} className="mt-4">
-                    <Globe className="h-4 w-4 mr-2" />
-                    Open Browser
-                  </Button>
+        {/* Steps List */}
+        <div className="flex-1 flex flex-col bg-muted/30 p-4">
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {steps.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="space-y-2">
+                  <Plus className="h-8 w-8 mx-auto" />
+                  <p className="text-sm">No steps yet</p>
+                  <p className="text-xs">Add steps to build your automation</p>
                 </div>
               </div>
             ) : (
-              <div className="h-full relative">
-                {/* Real Browser Window */}
-                <iframe
-                  ref={browserRef}
-                  src={currentUrl}
-                  className={`w-full h-full border-0 ${
-                    viewMode === "mobile" ? "max-w-sm mx-auto" : ""
-                  }`}
-                  title="Automation Browser"
-                />
-
-                {/* Automation Instructions Overlay */}
-                {showInstructions && (
-                  <div className="absolute top-4 right-4 w-80 bg-card border border-border rounded-lg shadow-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium flex items-center gap-2">
-                        <Target className="h-4 w-4" />
-                        Automation Instructions
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowInstructions(false)}
-                      >
-                        <EyeOff className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {isAutomationRunning && (
-                      <Alert>
-                        <Zap className="h-4 w-4" />
-                        <AlertDescription>
-                          Automation is running... Step {currentStepIndex + 1}{" "}
-                          of {steps.length}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">
-                        Current Step:
-                      </Label>
-                      {currentStepIndex >= 0 && steps[currentStepIndex] ? (
-                        <div className="bg-muted p-2 rounded text-xs">
-                          <div className="font-medium">
-                            {steps[currentStepIndex].description}
-                          </div>
-                          <div className="text-muted-foreground mt-1">
-                            {steps[currentStepIndex].type === "navigate" &&
-                              `URL: ${steps[currentStepIndex].value}`}
-                            {steps[currentStepIndex].type === "click" &&
-                              `Selector: ${steps[currentStepIndex].selector}`}
-                            {steps[currentStepIndex].type === "type" &&
-                              `Text: ${steps[currentStepIndex].value}`}
-                            {steps[currentStepIndex].type === "wait" &&
-                              `Duration: ${steps[currentStepIndex].value}s`}
-                            {steps[currentStepIndex].type === "screenshot" &&
-                              "Taking screenshot..."}
-                            {steps[currentStepIndex].type === "extract" &&
-                              `Selector: ${steps[currentStepIndex].selector}`}
-                          </div>
+              steps.map((step, index) => {
+                const stepType = stepTypes.find((s) => s.value === step.type);
+                const isCurrentStep = currentStepIndex === index;
+                const isCompleted = currentStepIndex > index;
+                return (
+                  <Card
+                    key={step.id}
+                    className={`relative ${
+                      isCurrentStep
+                        ? "ring-2 ring-primary bg-primary/5"
+                        : isCompleted
+                          ? "bg-green-50 border-green-200"
+                          : ""
+                    }`}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          <Badge
+                            variant={
+                              isCurrentStep
+                                ? "default"
+                                : isCompleted
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                            className={`text-xs ${
+                              isCurrentStep
+                                ? "bg-primary"
+                                : isCompleted
+                                  ? "bg-green-100 text-green-800"
+                                  : ""
+                            }`}
+                          >
+                            {index + 1}
+                          </Badge>
+                          {stepType && <stepType.icon className="h-4 w-4" />}
+                          <span className="text-sm font-medium">
+                            {stepType?.label}
+                          </span>
+                          {isCurrentStep && isAutomationRunning && (
+                            <Badge
+                              variant="default"
+                              className="bg-blue-100 text-blue-800 text-xs"
+                            >
+                              <Zap className="h-3 w-3 mr-1" />
+                              Running
+                            </Badge>
+                          )}
+                          {isCompleted && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-green-100 text-green-800 text-xs"
+                            >
+                              ✓ Done
+                            </Badge>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          No step executing
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveStep(step.id, "up")}
+                            disabled={index === 0 || isAutomationRunning}
+                          >
+                            <ArrowUp className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveStep(step.id, "down")}
+                            disabled={
+                              index === steps.length - 1 || isAutomationRunning
+                            }
+                          >
+                            <ArrowDown className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeStep(step.id)}
+                            disabled={isAutomationRunning}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Description</Label>
+                        <Input
+                          value={step.description}
+                          onChange={(e) =>
+                            updateStep(step.id, {
+                              description: e.target.value,
+                            })
+                          }
+                          className="text-xs"
+                          placeholder="Step description"
+                          disabled={isAutomationRunning}
+                        />
+                      </div>
+                      {step.type === "navigate" && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">URL</Label>
+                          <Input
+                            value={step.value || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, {
+                                value: e.target.value,
+                              })
+                            }
+                            placeholder="https://google.com"
+                            className="text-xs"
+                            disabled={isAutomationRunning}
+                          />
                         </div>
                       )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Next Steps:</Label>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {steps
-                          .slice(currentStepIndex + 1, currentStepIndex + 4)
-                          .map((step, index) => (
-                            <div
-                              key={step.id}
-                              className="text-xs bg-muted/50 p-2 rounded"
-                            >
-                              {currentStepIndex + index + 2}. {step.description}
+                      {(step.type === "click" ||
+                        step.type === "type" ||
+                        step.type === "extract") && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">CSS Selector</Label>
+                          <Input
+                            value={step.selector || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, {
+                                selector: e.target.value,
+                              })
+                            }
+                            placeholder="button, .class, #id"
+                            className="text-xs"
+                            disabled={isAutomationRunning}
+                          />
+                        </div>
+                      )}
+                      {step.type === "type" && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">Text to Type</Label>
+                          <Input
+                            value={step.value || ""}
+                            onChange={(e) =>
+                              updateStep(step.id, {
+                                value: e.target.value,
+                              })
+                            }
+                            placeholder="Text to enter"
+                            className="text-xs"
+                            disabled={isAutomationRunning}
+                          />
+                          {credentials.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-xs">
+                                Or use credential
+                              </Label>
+                              <Select
+                                value={step.credentialId || ""}
+                                onValueChange={(value) =>
+                                  updateStep(step.id, {
+                                    credentialId: value || undefined,
+                                  })
+                                }
+                                disabled={isAutomationRunning}
+                              >
+                                <SelectTrigger className="text-xs">
+                                  <SelectValue placeholder="Select credential" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {credentials.map((cred) => (
+                                    <SelectItem key={cred.id} value={cred.id}>
+                                      <div className="flex items-center gap-2">
+                                        <Shield className="h-3 w-3" />
+                                        {cred.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
-                          ))}
-                        {steps.length === 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            No steps defined
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Element Highlight Overlay */}
-                {isAutomationRunning && currentStepIndex >= 0 && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                      Step {currentStepIndex + 1}:{" "}
-                      {steps[currentStepIndex]?.description}
-                    </div>
-                  </div>
-                )}
-              </div>
+                          )}
+                        </div>
+                      )}
+                      {step.type === "wait" && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">Duration (seconds)</Label>
+                          <Input
+                            type="number"
+                            value={step.value || "1"}
+                            onChange={(e) =>
+                              updateStep(step.id, {
+                                value: e.target.value,
+                              })
+                            }
+                            className="text-xs"
+                            min="1"
+                            disabled={isAutomationRunning}
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Steps Editor */}
+        {/* Steps Editor and Instructions */}
         <div className="w-96 border-l border-border bg-card flex flex-col">
           <Tabs defaultValue="steps" className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 m-4 mb-0">
+            <TabsList className="grid w-full grid-cols-3 m-4 mb-0">
               <TabsTrigger value="steps">Steps</TabsTrigger>
+              <TabsTrigger value="instructions">Instructions</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
+            {/* Steps Tab */}
             <TabsContent
               value="steps"
               className="flex-1 overflow-hidden m-4 mt-4"
             >
               <div className="h-full flex flex-col space-y-4">
-                {/* Add Step Buttons */}
                 <div className="grid grid-cols-2 gap-2">
                   {stepTypes.map((stepType) => (
                     <Button
@@ -560,57 +569,77 @@ export function AutomationBuilder({
                     </Button>
                   ))}
                 </div>
-
                 <Separator />
+              </div>
+            </TabsContent>
 
-                {/* Steps List */}
-                <div className="flex-1 overflow-y-auto space-y-3">
+            {/* Instructions Tab */}
+            <TabsContent
+              value="instructions"
+              className="flex-1 overflow-hidden m-4 mt-4"
+            >
+              <div className="h-full flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Automation Instructions
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInstructions(!showInstructions)}
+                  ></Button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  {isAutomationRunning && (
+                    <Alert>
+                      <Zap className="h-4 w-4" />
+                      <AlertDescription>
+                        Automation is running... Step {currentStepIndex + 1} of{" "}
+                        {steps.length}
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {steps.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <div className="space-y-2">
-                        <Plus className="h-8 w-8 mx-auto" />
-                        <p className="text-sm">No steps yet</p>
-                        <p className="text-xs">
-                          Add steps to build your automation
-                        </p>
-                      </div>
+                      <p className="text-sm">No steps defined</p>
                     </div>
                   ) : (
-                    steps.map((step, index) => {
-                      const stepType = stepTypes.find(
-                        (s) => s.value === step.type
-                      );
-                      const isCurrentStep = currentStepIndex === index;
-                      const isCompleted = currentStepIndex > index;
-                      return (
-                        <Card
-                          key={step.id}
-                          className={`relative ${
-                            isCurrentStep
-                              ? "ring-2 ring-primary bg-primary/5"
-                              : isCompleted
-                              ? "bg-green-50 border-green-200"
-                              : ""
-                          }`}
-                        >
-                          <CardHeader className="pb-2">
+                    <div role="list">
+                      {steps.map((step, index) => {
+                        const stepType = stepTypes.find(
+                          (s) => s.value === step.type
+                        );
+                        const isCurrentStep = currentStepIndex === index;
+                        const isCompleted = currentStepIndex > index;
+                        return (
+                          <div
+                            key={step.id}
+                            role="listitem"
+                            className={`p-3 my-2 rounded-lg border ${
+                              isCurrentStep
+                                ? "ring-2 ring-primary bg-primary/5"
+                                : isCompleted
+                                  ? "bg-green-50 border-green-200"
+                                  : "bg-muted/50 border-border"
+                            }`}
+                          >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <GripVertical className="h-4 w-4 text-muted-foreground" />
                                 <Badge
                                   variant={
                                     isCurrentStep
                                       ? "default"
                                       : isCompleted
-                                      ? "secondary"
-                                      : "outline"
+                                        ? "secondary"
+                                        : "outline"
                                   }
                                   className={`text-xs ${
                                     isCurrentStep
                                       ? "bg-primary"
                                       : isCompleted
-                                      ? "bg-green-100 text-green-800"
-                                      : ""
+                                        ? "bg-green-100 text-green-800"
+                                        : ""
                                   }`}
                                 >
                                   {index + 1}
@@ -619,7 +648,7 @@ export function AutomationBuilder({
                                   <stepType.icon className="h-4 w-4" />
                                 )}
                                 <span className="text-sm font-medium">
-                                  {stepType?.label}
+                                  {step.description}
                                 </span>
                                 {isCurrentStep && isAutomationRunning && (
                                   <Badge
@@ -639,148 +668,29 @@ export function AutomationBuilder({
                                   </Badge>
                                 )}
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeStep(step.id)}
-                                disabled={isAutomationRunning}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
                             </div>
-                          </CardHeader>
-
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="space-y-2">
-                              <Label className="text-xs">Description</Label>
-                              <Input
-                                value={step.description}
-                                onChange={(e) =>
-                                  updateStep(step.id, {
-                                    description: e.target.value,
-                                  })
-                                }
-                                className="text-xs"
-                                placeholder="Step description"
-                                disabled={isAutomationRunning}
-                              />
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {step.type === "navigate" && `URL: ${step.value}`}
+                              {step.type === "click" &&
+                                `Selector: ${step.selector}`}
+                              {step.type === "type" && `Text: ${step.value}`}
+                              {step.type === "wait" &&
+                                `Duration: ${step.value}s`}
+                              {step.type === "screenshot" &&
+                                "Taking screenshot..."}
+                              {step.type === "extract" &&
+                                `Selector: ${step.selector}`}
                             </div>
-
-                            {step.type === "navigate" && (
-                              <div className="space-y-2">
-                                <Label className="text-xs">URL</Label>
-                                <Input
-                                  value={step.value || ""}
-                                  onChange={(e) =>
-                                    updateStep(step.id, {
-                                      value: e.target.value,
-                                    })
-                                  }
-                                  placeholder="https://example.com"
-                                  className="text-xs"
-                                  disabled={isAutomationRunning}
-                                />
-                              </div>
-                            )}
-
-                            {(step.type === "click" ||
-                              step.type === "type" ||
-                              step.type === "extract") && (
-                              <div className="space-y-2">
-                                <Label className="text-xs">CSS Selector</Label>
-                                <Input
-                                  value={step.selector || ""}
-                                  onChange={(e) =>
-                                    updateStep(step.id, {
-                                      selector: e.target.value,
-                                    })
-                                  }
-                                  placeholder="button, .class, #id"
-                                  className="text-xs"
-                                  disabled={isAutomationRunning}
-                                />
-                              </div>
-                            )}
-
-                            {step.type === "type" && (
-                              <div className="space-y-2">
-                                <Label className="text-xs">Text to Type</Label>
-                                <Input
-                                  value={step.value || ""}
-                                  onChange={(e) =>
-                                    updateStep(step.id, {
-                                      value: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Text to enter"
-                                  className="text-xs"
-                                  disabled={isAutomationRunning}
-                                />
-
-                                {credentials.length > 0 && (
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">
-                                      Or use credential
-                                    </Label>
-                                    <Select
-                                      value={step.credentialId || ""}
-                                      onValueChange={(value) =>
-                                        updateStep(step.id, {
-                                          credentialId: value || undefined,
-                                        })
-                                      }
-                                      disabled={isAutomationRunning}
-                                    >
-                                      <SelectTrigger className="text-xs">
-                                        <SelectValue placeholder="Select credential" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {credentials.map((cred) => (
-                                          <SelectItem
-                                            key={cred.id}
-                                            value={cred.id}
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <Shield className="h-3 w-3" />
-                                              {cred.name}
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {step.type === "wait" && (
-                              <div className="space-y-2">
-                                <Label className="text-xs">
-                                  Duration (seconds)
-                                </Label>
-                                <Input
-                                  type="number"
-                                  value={step.value || "1"}
-                                  onChange={(e) =>
-                                    updateStep(step.id, {
-                                      value: e.target.value,
-                                    })
-                                  }
-                                  className="text-xs"
-                                  min="1"
-                                  disabled={isAutomationRunning}
-                                />
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
             </TabsContent>
 
+            {/* Settings Tab */}
             <TabsContent
               value="settings"
               className="flex-1 overflow-y-auto m-4 mt-4"
@@ -794,7 +704,6 @@ export function AutomationBuilder({
                     placeholder="Enter automation name"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label>Description</Label>
                   <Textarea
@@ -804,12 +713,9 @@ export function AutomationBuilder({
                     rows={3}
                   />
                 </div>
-
                 <Separator />
-
                 <div className="space-y-4">
                   <Label>Schedule</Label>
-
                   <Select
                     value={schedule.type}
                     onValueChange={(value) =>
@@ -828,7 +734,6 @@ export function AutomationBuilder({
                       <SelectItem value="fixed">Fixed time</SelectItem>
                     </SelectContent>
                   </Select>
-
                   {schedule.type === "interval" && (
                     <div className="flex gap-2">
                       <Input
@@ -863,7 +768,6 @@ export function AutomationBuilder({
                       </Select>
                     </div>
                   )}
-
                   {schedule.type === "fixed" && (
                     <Input
                       type="time"
