@@ -1499,7 +1499,6 @@ export function AutomationBuilder({
             </TabsContent>
           </Tabs>
         </div>
-        ;
       </div>
     </div>
   );
