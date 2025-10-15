@@ -74,6 +74,8 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
 
   const wc = browserWin.webContents;
 
+  console.log("Running step:", step);
+
   switch (step.type) {
     case "navigate":
       await wc.loadURL(step.value);
@@ -85,8 +87,14 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       break;
     case "type":
       await wc.executeJavaScript(`
-        const el = document.querySelector("${step.selector}");
-        if (el) { el.focus(); el.value = "${step.value}"; el.dispatchEvent(new Event('input', { bubbles: true })); }
+        (() => {
+          const el = document.querySelector("${step.selector}");
+          if (el) {
+            el.focus();
+            el.value = "${step.value}";
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        })();
       `);
       break;
     case "wait":
@@ -144,8 +152,10 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
     case "scroll":
       if (step.scrollType === "toElement") {
         await wc.executeJavaScript(`
-          const el = document.querySelector("${step.selector}");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
+          (() => {
+            const el = document.querySelector("${step.selector}");
+            if (el) el.scrollIntoView({ behavior: "smooth" });
+          })();
         `);
       } else if (step.scrollType === "byAmount") {
         await wc.executeJavaScript(`
@@ -155,60 +165,69 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       break;
     case "selectOption":
       await wc.executeJavaScript(`
-        const select = document.querySelector("${step.selector}");
-        if (select) {
-          ${
-            step.optionValue
-              ? `select.value = "${step.optionValue}";`
-              : `select.selectedIndex = ${step.optionIndex || 0};`
+        (() => {
+          const select = document.querySelector("${step.selector}");
+          if (select) {
+            ${
+              step.optionValue
+                ? `select.value = "${step.optionValue}";`
+                : `select.selectedIndex = ${step.optionIndex || 0};`
+            }
+            select.dispatchEvent(new Event('change', { bubbles: true }));
           }
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        })();
       `);
       break;
     case "fileUpload":
       await wc.executeJavaScript(`
-        const input = document.querySelector("${step.selector}");
-        if (input) {
-          const file = new File([""], "${step.filePath}", { type: "text/plain" });
-          const dataTransfer = new DataTransfer();
-          dataTransfer.items.add(file);
-          input.files = dataTransfer.files;
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        (() => {
+          const input = document.querySelector("${step.selector}");
+          if (input) {
+            const file = new File([""], "${step.filePath}", { type: "text/plain" });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        })();
       `);
       break;
     case "hover":
       await wc.executeJavaScript(`
-        const el = document.querySelector("${step.selector}");
-        if (el) {
-          const event = new MouseEvent('mouseover', { bubbles: true });
-          el.dispatchEvent(event);
-        }
+        (() => {
+          const el = document.querySelector("${step.selector}");
+          if (el) {
+            const event = new MouseEvent('mouseover', { bubbles: true });
+            el.dispatchEvent(event);
+          }
+        })();
       `);
       break;
   }
 });
 
-ipcMain.handle("browser:runConditional", async (_event, { conditionType, selector, expectedValue }) => {
-  if (!browserWin) return;
+ipcMain.handle(
+  "browser:runConditional",
+  async (_event, { conditionType, selector, expectedValue }) => {
+    if (!browserWin) return;
 
-  const wc = browserWin.webContents;
-  let conditionResult = false;
+    const wc = browserWin.webContents;
+    let conditionResult = false;
 
-  if (conditionType === "elementExists") {
-    conditionResult = await wc.executeJavaScript(`
+    if (conditionType === "elementExists") {
+      conditionResult = await wc.executeJavaScript(`
       !!document.querySelector("${selector}");
     `);
-  } else if (conditionType === "valueMatches") {
-    const value = await wc.executeJavaScript(`
+    } else if (conditionType === "valueMatches") {
+      const value = await wc.executeJavaScript(`
       document.querySelector("${selector}")?.innerText || "";
     `);
-    conditionResult = value === expectedValue;
-  }
+      conditionResult = value === expectedValue;
+    }
 
-  return conditionResult;
-});
+    return conditionResult;
+  }
+);
 
 async function executeSubStep(wc: any, step: any, index?: number) {
   switch (step.type) {
@@ -218,8 +237,10 @@ async function executeSubStep(wc: any, step: any, index?: number) {
       `);
     case "type":
       return await wc.executeJavaScript(`
-        const el = document.querySelectorAll("${step.selector}")[${index || 0}];
-        if (el) { el.focus(); el.value = "${step.value}"; el.dispatchEvent(new Event('input', { bubbles: true })); }
+        (() => {
+          const el = document.querySelectorAll("${step.selector}")[${index || 0}];
+          if (el) { el.focus(); el.value = "${step.value}"; el.dispatchEvent(new Event('input', { bubbles: true })); }
+        })();
       `);
     case "extract":
       return await wc.executeJavaScript(`
