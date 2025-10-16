@@ -54,7 +54,6 @@ import { stepTypes } from "../types/types";
 import NodeDetails from "./automationBuilder/NodeDetails";
 import AddStepPopup from "./automationBuilder/AddStepPopup";
 import AutomationNode from "./automationBuilder/AutomationNode";
-import { set } from "react-hook-form/dist";
 
 const nodeTypes = {
   automationStep: AutomationNode,

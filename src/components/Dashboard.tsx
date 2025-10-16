@@ -19,7 +19,7 @@ import {
   Timer
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
-import type { Automation } from '../app';
+import type { Automation } from '../types/types';
 
 interface DashboardProps {
   automations: Automation[];
