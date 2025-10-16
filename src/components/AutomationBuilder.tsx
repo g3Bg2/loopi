@@ -4,19 +4,13 @@ import ReactFlow, {
   Background,
   Controls,
   MiniMap,
-  Node as FlowNode,
-  Edge as FlowEdge,
   Connection,
   useNodesState,
   useEdgesState,
-  Handle,
-  Position,
   OnSelectionChangeParams,
-  NodeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
@@ -28,17 +22,17 @@ import {
   SelectValue,
 } from "./ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import {
   ArrowLeft,
   Save,
   Play,
-  Plus,
-  Trash2,
   Globe,
-  Mouse,
-  Type,
-  Clock,
-  Camera,
-  Download,
   Pause,
   Square,
   Settings,
@@ -49,345 +43,18 @@ import type {
   Credential,
   Node,
   Edge,
-} from "../app";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  NodeData,
+  EdgeData,
+  ReactFlowNode,
+  ReactFlowEdge,
+} from "../types/types";
+import { stepTypes } from "../types/types";
 
-type NodeData = Node["data"] & {
-  onAddNode: (
-    sourceId: string,
-    type: AutomationStep["type"] | "conditional" | "update" | "delete",
-    updates?: Partial<Node["data"]>
-  ) => void;
-};
-type ReactFlowNode = FlowNode<NodeData>;
-type EdgeData = { label?: string };
-type ReactFlowEdge = FlowEdge<EdgeData>;
-const stepTypes = [
-  {
-    value: "navigate",
-    label: "Navigate",
-    icon: Globe,
-    description: "Go to a URL",
-  },
-  {
-    value: "click",
-    label: "Click",
-    icon: Mouse,
-    description: "Click an element",
-  },
-  { value: "type", label: "Type", icon: Type, description: "Enter text" },
-  {
-    value: "wait",
-    label: "Wait",
-    icon: Clock,
-    description: "Wait for a duration",
-  },
-  {
-    value: "screenshot",
-    label: "Screenshot",
-    icon: Camera,
-    description: "Take a screenshot",
-  },
-];
-
-// Extracted component for node details panel
-const NodeDetails = ({
-  node,
-  onUpdate,
-}: {
-  node: ReactFlowNode;
-  onUpdate: (
-    sourceId: string,
-    type: "update" | "delete",
-    updates?: Partial<Node["data"]>
-  ) => void;
-}) => {
-  const { data, id } = node;
-
-  return (
-    <Card className="w-80 max-h-[80vh] overflow-y-auto">
-      <CardHeader className="p-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium capitalize">
-            {data.step ? data.step.type : "Conditional"}
-          </span>
-          {id !== "1" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                onUpdate(id, "delete");
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="p-3 space-y-4">
-        {data.step ? (
-          <>
-            <div className="space-y-2">
-              <Label className="text-xs">Description</Label>
-              <Input
-                value={data.step.description || ""}
-                onChange={(e) => {
-                  onUpdate(id, "update", {
-                    step: { ...data.step, description: e.target.value },
-                  });
-                }}
-                className="text-xs"
-                placeholder="Step description"
-              />
-            </div>
-            {data.step.type === "navigate" && (
-              <div className="space-y-2">
-                <Label className="text-xs">URL</Label>
-                <Input
-                  value={data.step.value || ""}
-                  placeholder="https://google.com"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, value: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            )}
-            {(data.step.type === "click" ||
-              data.step.type === "type" ||
-              data.step.type === "extractWithLogic") && (
-              <div className="space-y-2">
-                <Label className="text-xs">CSS Selector</Label>
-                <Input
-                  value={data.step.selector || ""}
-                  placeholder="CSS Selector"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, selector: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            )}
-            {data.step.type === "type" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Text to Type</Label>
-                <Input
-                  value={data.step.value || ""}
-                  placeholder="Text to type"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, value: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            )}
-            {data.step.type === "wait" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Duration (seconds)</Label>
-                <Input
-                  type="number"
-                  value={data.step.value || "1"}
-                  placeholder="Milliseconds to wait"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, value: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            )}
-            {data.step.type === "screenshot" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Filename</Label>
-                <Input
-                  type="text"
-                  value={data.step.value || ""}
-                  placeholder="filename"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, value: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <Label className="text-xs">Condition Type</Label>
-              <Select
-                value={data.conditionType || "elementExists"}
-                onValueChange={(value) => {
-                  onUpdate(id, "update", {
-                    conditionType: value as any,
-                  });
-                }}
-              >
-                <SelectTrigger className="text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="elementExists">Element Exists</SelectItem>
-                  <SelectItem value="valueMatches">Value Matches</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Selector</Label>
-              <Input
-                value={data.selector || ""}
-                onChange={(e) => {
-                  onUpdate(id, "update", {
-                    selector: e.target.value,
-                  });
-                }}
-                placeholder="CSS Selector"
-                className="text-xs"
-              />
-            </div>
-            {data.conditionType === "valueMatches" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs">Condition</Label>
-                  <Select
-                    value={data.condition || "equals"}
-                    onValueChange={(value) => {
-                      onUpdate(id, "update", {
-                        condition: value as any,
-                      });
-                    }}
-                  >
-                    <SelectTrigger className="text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="equals">Equals</SelectItem>
-                      <SelectItem value="contains">Contains</SelectItem>
-                      <SelectItem value="greaterThan">Greater Than</SelectItem>
-                      <SelectItem value="lessThan">Less Than</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Expected Value</Label>
-                  <Input
-                    value={data.expectedValue || ""}
-                    onChange={(e) => {
-                      onUpdate(id, "update", {
-                        expectedValue: e.target.value,
-                      });
-                    }}
-                    placeholder="Expected value"
-                    className="text-xs"
-                  />
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Extracted component for node addition popup
-const AddStepPopup = ({
-  onAdd,
-}: {
-  onAdd: (type: AutomationStep["type"] | "conditional") => void;
-}) => {
-  return (
-    <Card className="w-48">
-      <CardHeader className="p-3">
-        <h3 className="text-sm font-medium">Add Next Step</h3>
-      </CardHeader>
-      <CardContent className="p-3 space-y-1">
-        {stepTypes.map((stepType) => (
-          <Button
-            key={stepType.value}
-            variant="ghost"
-            className="w-full text-left justify-start text-xs py-1 px-2"
-            onClick={() => {
-              onAdd(stepType.value as AutomationStep["type"]);
-            }}
-          >
-            <stepType.icon className="h-4 w-4 mr-2" />
-            {stepType.label}
-          </Button>
-        ))}
-        <Button
-          variant="ghost"
-          className="w-full text-left justify-start text-xs py-1 px-2"
-          onClick={() => {
-            onAdd("conditional");
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Conditional
-        </Button>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Simplified AutomationNode to be small and circular, with selection highlighting
-// Removed in-node inputs, add menu, and delete button (moved to details panel)
-const AutomationNode = ({
-  id,
-  data,
-  selected = false,
-}: NodeProps<NodeData>) => {
-  const isConditional = !data.step;
-
-  return (
-    <div className="relative">
-      {id !== "1" && (
-        <Handle type="target" position={Position.Top} style={{ top: -4 }} />
-      )}
-      <div
-        className={`w-24 h-12 rounded-full flex items-center justify-center border-2 shadow-sm text-xs font-medium capitalize text-center cursor-pointer ${selected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"}`}
-      >
-        {data.step ? data.step.type : "Conditional"}
-      </div>
-      {isConditional ? (
-        <>
-          <Handle
-            type="source"
-            position={Position.Left}
-            id="if"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="else"
-          />
-        </>
-      ) : (
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="default"
-          style={{ left: "50%", bottom: -5, transform: "translateX(-50%)" }}
-        />
-      )}
-    </div>
-  );
-};
+// Automation Builder component and related sub-components
+import NodeDetails from "./automationBuilder/NodeDetails";
+import AddStepPopup from "./automationBuilder/AddStepPopup";
+import AutomationNode from "./automationBuilder/AutomationNode";
+import { set } from "react-hook-form/dist";
 
 const nodeTypes = {
   automationStep: AutomationNode,
@@ -552,6 +219,7 @@ export function AutomationBuilder({
                   conditionType: "elementExists",
                   selector: "",
                   onAddNode: handleNodeAction,
+                  nodeRunning: false,
                 }
               : {
                   step: {
@@ -564,6 +232,7 @@ export function AutomationBuilder({
                     value: type === "navigate" ? "https://" : "",
                   },
                   onAddNode: handleNodeAction,
+                  nodeRunning: false,
                 },
           position: {
             x: sourceNode ? sourceNode.position.x : 250,
@@ -663,7 +332,11 @@ export function AutomationBuilder({
       setNodes(
         automation.nodes.map((node) => ({
           ...node,
-          data: { ...node.data, onAddNode: handleNodeAction },
+          data: {
+            ...node.data,
+            onAddNode: handleNodeAction,
+            nodeRunning: false,
+          },
         }))
       );
       setEdges(
@@ -696,8 +369,9 @@ export function AutomationBuilder({
             value: "https://",
           },
           onAddNode: handleNodeAction,
+          nodeRunning: false,
         },
-        position: {x: 400, y:50},
+        position: { x: 400, y: 50 },
       };
       setNodes([defaultNode]);
     }
@@ -782,6 +456,12 @@ export function AutomationBuilder({
 
   const executeNode = async (node: ReactFlowNode) => {
     setCurrentNodeId(node.id);
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === node.id ? { ...n, data: { ...n.data, nodeRunning: true } } : n
+      )
+    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
     if (node.type === "automationStep" && node.data.step) {
       return await (window as any).electronAPI.runStep(node.data.step);
     } else if (node.type === "conditional") {
@@ -820,6 +500,13 @@ export function AutomationBuilder({
         if (!node) return;
 
         const result = await executeNode(node);
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === node.id
+              ? { ...n, data: { ...n.data, nodeRunning: false } }
+              : n
+          )
+        );
         let nextNodes: string[] = [];
 
         console.log("Execution result:", result);
