@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ReactFlow, {
   addEdge,
   Background,
@@ -88,6 +88,7 @@ export function AutomationBuilder({
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isAutomationRunning, setIsAutomationRunning] = useState(false);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
+  const stopGraphExecutionRef  = useRef(false);
 
   // Enhanced onConnect with connection restrictions and labels for "if"/"else"
   const onConnect = useCallback(
@@ -490,7 +491,8 @@ export function AutomationBuilder({
     try {
       const visited = new Set<string>();
       const executeGraph = async (nodeId: string) => {
-        if (visited.has(nodeId)) return;
+        // if (visited.has(nodeId)) return;
+        if (stopGraphExecutionRef.current) return;
         visited.add(nodeId);
 
         const node = nodes.find((n) => n.id === nodeId) as
@@ -542,6 +544,7 @@ export function AutomationBuilder({
     } finally {
       setIsAutomationRunning(false);
       setCurrentNodeId(null);
+      stopGraphExecutionRef.current = false;
     }
   };
 
@@ -550,6 +553,7 @@ export function AutomationBuilder({
   };
 
   const stopAutomation = () => {
+    stopGraphExecutionRef.current = true;
     setIsAutomationRunning(false);
     setCurrentNodeId(null);
   };
