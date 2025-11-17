@@ -18,6 +18,12 @@ if (require("electron-squirrel-startup")) {
 
 let browserWin: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
+let currentNodeId: string | null = null;
+let currentIndex: Record<string, number> | null = null;
+
+function injectIndexIntoSelector(selector: string, index: number): string {
+  return selector.replace(/\$\{index\}/g, index.toString());
+}
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -61,7 +67,7 @@ async function ensureBrowserOpen(url: string = "https://www.google.com/") {
 }
 
 function injectSearchBar(win: BrowserWindow) {
-  win.webContents.on('did-finish-load', () => {
+  win.webContents.on("did-finish-load", () => {
     const searchBarScript = `
       if (document.getElementById('electron-search-bar')) return; // Avoid duplicates
       const bar = document.createElement('div');
@@ -132,6 +138,18 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       await wc.loadURL(step.value);
       break;
     case "click":
+      if (step.selector.includes("${index}")) {
+        const effectiveSelector = injectIndexIntoSelector(
+          step.selector,
+          currentIndex[currentNodeId!] as number
+          // currentIndex as number
+        );
+        console.log("Effective selector:", effectiveSelector);
+        await wc.executeJavaScript(`
+          document.querySelector("${effectiveSelector}")?.click();
+        `);
+        break;
+      }
       await wc.executeJavaScript(`
         document.querySelector("${step.selector}")?.click();
       `);
@@ -153,6 +171,14 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       break;
     case "screenshot":
       const img = await wc.capturePage();
+      if (!step.savePath) {
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[-:.]/g, "")
+          .slice(0, 15);
+        step.savePath = `screenshot_${timestamp}.png`;
+      }
+      await require("fs").promises.writeFile(step.savePath, img.toPNG());
       return img.toPNG().toString("base64");
     case "extract":
       return await wc.executeJavaScript(`
@@ -259,24 +285,63 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
 
 ipcMain.handle(
   "browser:runConditional",
-  async (_event, { conditionType, selector, expectedValue }) => {
+  async (
+    _event,
+    {
+      conditionType,
+      selector,
+      expectedValue,
+      nodeId,
+      maxIterations,
+      increment,
+      startIndex,
+    }
+  ) => {
     if (!browserWin) return;
 
     const wc = browserWin.webContents;
     let conditionResult = false;
 
-    if (conditionType === "elementExists") {
+    if (currentIndex === null || currentIndex[nodeId!] === undefined) {
+      currentIndex = currentIndex || {};
+      currentIndex[nodeId!] = startIndex || 1;
+      currentNodeId = nodeId;
+    } else if (
+      maxIterations !== undefined &&
+      currentIndex[nodeId!] > maxIterations
+    ) {
+      currentIndex[nodeId!] = startIndex || 1;
+      return {
+        conditionResult: false,
+        currentIndex,
+        effectiveSelector: null,
+      };
+    } else {
+      currentIndex[nodeId!] += increment || 1;
+    }
+
+    const effectiveSelector = injectIndexIntoSelector(
+      selector,
+      currentIndex[nodeId] as number
+    );
+
+    if (
+      conditionType === "elementExists" ||
+      conditionType === "loopUntilFalse"
+    ) {
       conditionResult = await wc.executeJavaScript(`
-      !!document.querySelector("${selector}");
+      !!document.querySelector("${effectiveSelector}");
     `);
     } else if (conditionType === "valueMatches") {
       const value = await wc.executeJavaScript(`
-      document.querySelector("${selector}")?.innerText || "";
+      document.querySelector("${effectiveSelector}")?.innerText || "";
     `);
       conditionResult = value === expectedValue;
     }
 
-    return conditionResult;
+    return conditionType === "loopUntilFalse"
+      ? { conditionResult, currentIndex, effectiveSelector }
+      : conditionResult;
   }
 );
 
@@ -342,9 +407,7 @@ ipcMain.handle("pick-selector", async (__event, url: string) => {
         `;
         browserWin?.webContents.executeJavaScript(indexScript).then((res) => {
           if (res) {
-            resolve(
-              `${selector}||${res.optionIndex}||${res.optionValue}`
-            );
+            resolve(`${selector}||${res.optionIndex}||${res.optionValue}`);
           } else {
             resolve(selector);
           }

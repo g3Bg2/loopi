@@ -1,5 +1,12 @@
 import { Edge as FlowEdge, Node as FlowNode } from "reactflow";
-import { Globe, Mouse, Type, Clock, Camera } from "lucide-react";
+import {
+  Globe,
+  Mouse,
+  Type,
+  Clock,
+  Camera,
+  Repeat as RepeatIcon,
+} from "lucide-react";
 
 export interface Automation {
   id: string;
@@ -57,9 +64,12 @@ export interface AutomationStep {
   headers?: Record<string, string>;
   storeKey?: string;
   // For conditional
-  conditionType?: "elementExists" | "valueMatches";
+  conditionType?: "elementExists" | "valueMatches" | "loopUntilFalse";
   thenSteps?: AutomationStep[];
   elseSteps?: AutomationStep[];
+  startIndex?: number;  // Default 1
+  increment?: number;   // Default 1
+  maxIterations?: number;  // Optional safeguard
   // For scroll
   scrollType?: "toElement" | "byAmount";
   scrollAmount?: number;
@@ -68,7 +78,26 @@ export interface AutomationStep {
   optionIndex?: number;
   // For fileUpload
   filePath?: string;
-  onAddNode?: (id: string, type: "delete" | "conditional" | "navigate" | "click" | "type" | "wait" | "screenshot" | "extract" | "extractWithLogic" | "repeat" | "apiCall" | "scroll" | "selectOption" | "fileUpload" | "hover" | "update") => void;
+  onAddNode?: (
+    id: string,
+    type:
+      | "delete"
+      | "conditional"
+      | "navigate"
+      | "click"
+      | "type"
+      | "wait"
+      | "screenshot"
+      | "extract"
+      | "extractWithLogic"
+      | "repeat"
+      | "apiCall"
+      | "scroll"
+      | "selectOption"
+      | "fileUpload"
+      | "hover"
+      | "update"
+  ) => void;
 }
 
 export interface Node {
@@ -76,9 +105,12 @@ export interface Node {
   type: "automationStep" | "conditional";
   data: {
     step?: AutomationStep;
-    conditionType?: "elementExists" | "valueMatches";
+    conditionType?: "elementExists" | "valueMatches" | "loopUntilFalse";
     selector?: string;
     expectedValue?: string;
+    startIndex?: number;
+    increment?: number;
+    maxIterations?: number;
     condition?: "equals" | "contains" | "greaterThan" | "lessThan";
   };
   position: { x: number; y: number };
@@ -141,7 +173,12 @@ export const stepTypes = [
     description: "Click an element",
   },
   { value: "type", label: "Type", icon: Type, description: "Enter text" },
-  { value: "selectOption", label: "Select Option", icon: Type, description: "Select an option from a dropdown" },
+  {
+    value: "selectOption",
+    label: "Select Option",
+    icon: Type,
+    description: "Select an option from a dropdown",
+  },
   {
     value: "wait",
     label: "Wait",

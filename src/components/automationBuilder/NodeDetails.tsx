@@ -40,7 +40,7 @@ export default function NodeDetails({
         recentUrl
       );
       if (selector) {
-        if(data.step.type === "selectOption") {
+        if (data.step?.type === "selectOption") {
           const sel = selector.toString().split("||");
           setter(sel[0]);
           onUpdate(id, "update", {
@@ -52,7 +52,7 @@ export default function NodeDetails({
             },
           });
           console.log("Option selector picked:", selector);
-        }else {
+        } else {
           setter(selector);
         }
       }
@@ -254,11 +254,16 @@ export default function NodeDetails({
                 <SelectContent>
                   <SelectItem value="elementExists">Element Exists</SelectItem>
                   <SelectItem value="valueMatches">Value Matches</SelectItem>
+                  <SelectItem value="loopUntilFalse">
+                    Loop Until False (Dynamic Index)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Selector</Label>
+              <Label className="text-xs">
+                Selector (use {"${index}"} for dynamic position)
+              </Label>
               <div className="flex gap-2">
                 <Input
                   value={data.selector || ""}
@@ -267,7 +272,7 @@ export default function NodeDetails({
                       selector: e.target.value,
                     });
                   }}
-                  placeholder="CSS Selector"
+                  placeholder="e.g., .inventory_list > div:nth-of-type(${index})"
                   className="text-xs flex-1"
                 />
                 <Button
@@ -284,8 +289,14 @@ export default function NodeDetails({
                   <Target className="h-3 w-3" />
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Picker generates static path; manually add {"${index}"} for
+                looping.
+              </p>
             </div>
-            {data.conditionType === "valueMatches" && (
+            {["valueMatches", "loopUntilFalse"].includes(
+              data.conditionType || ""
+            ) && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs">Condition</Label>
@@ -321,6 +332,65 @@ export default function NodeDetails({
                     className="text-xs"
                   />
                 </div>
+              </div>
+            )}
+            {data.conditionType === "loopUntilFalse" && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-xs">Loop Settings</Label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Start Index
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.startIndex || 1}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          startIndex: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      min={0}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Increment
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.increment || 1}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          increment: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      min={1}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Max Iterations
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.maxIterations || 100}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          maxIterations: parseInt(e.target.value) || 100,
+                        })
+                      }
+                      min={1}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Loops while condition true; connect "if" to actions, edge back
+                  here. "Else" for exit.
+                </p>
               </div>
             )}
           </>
