@@ -260,40 +260,74 @@ export default function NodeDetails({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">
-                Selector (use {"${index}"} for dynamic position)
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  value={data.selector || ""}
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      selector: e.target.value,
-                    });
-                  }}
-                  placeholder="e.g., .inventory_list > div:nth-of-type(${index})"
-                  className="text-xs flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handlePickSelector((selector) =>
-                      onUpdate(id, "update", { selector })
-                    )
-                  }
-                  title="Pick element from browser"
-                >
-                  <Target className="h-3 w-3" />
-                </Button>
+            {["elementExists", "valueMatches"].includes(
+              data.conditionType || ""
+            ) && (
+              <div className="space-y-2">
+                <Label className="text-xs">CSS Selector</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={data.selector || ""}
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        selector: e.target.value,
+                      });
+                    }}
+                    placeholder="CSS Selector"
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handlePickSelector((selector) =>
+                        onUpdate(id, "update", { selector })
+                      )
+                    }
+                    title="Pick element from browser"
+                  >
+                    <Target className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Picker generates static path; manually add {"${index}"} for
-                looping.
-              </p>
-            </div>
+            )}
+            {["loopUntilFalse"].includes(data.conditionType || "") && (
+              <div className="space-y-2">
+                <Label className="text-xs">
+                  Selector (use {"${index}"} for dynamic position)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={data.selector || ""}
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        selector: e.target.value,
+                      });
+                    }}
+                    placeholder="e.g., .inventory_list > div:nth-of-type(${index})"
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handlePickSelector((selector) =>
+                        onUpdate(id, "update", { selector })
+                      )
+                    }
+                    title="Pick element from browser"
+                  >
+                    <Target className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Picker generates static path; manually add {"${index}"} for
+                  looping.
+                </p>
+              </div>
+            )}
             {["valueMatches", "loopUntilFalse"].includes(
               data.conditionType || ""
             ) && (

@@ -67,9 +67,9 @@ export interface AutomationStep {
   conditionType?: "elementExists" | "valueMatches" | "loopUntilFalse";
   thenSteps?: AutomationStep[];
   elseSteps?: AutomationStep[];
-  startIndex?: number;  // Default 1
-  increment?: number;   // Default 1
-  maxIterations?: number;  // Optional safeguard
+  startIndex?: number; // Default 1
+  increment?: number; // Default 1
+  maxIterations?: number; // Optional safeguard
   // For scroll
   scrollType?: "toElement" | "byAmount";
   scrollAmount?: number;

@@ -20,16 +20,8 @@ const AutomationNode = ({
       </div>
       {isConditional ? (
         <>
-          <Handle
-            type="source"
-            position={Position.Left}
-            id="if"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="else"
-          />
+          <Handle type="source" position={Position.Left} id="if" />
+          <Handle type="source" position={Position.Right} id="else" />
         </>
       ) : (
         <Handle

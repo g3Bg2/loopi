@@ -1,4 +1,4 @@
-import * as ReactDOM from 'react-dom/client';
+import * as ReactDOM from "react-dom/client";
 import { useState } from "react";
 import { Dashboard } from "./components/Dashboard";
 import { CredentialVault } from "./components/CredentialVault";
@@ -42,7 +42,7 @@ const mockAutomations: Automation[] = [
     ],
     linkedCredentials: ["gmail-creds"],
     nodes: [],
-    edges: []
+    edges: [],
   },
   {
     id: "2",
@@ -69,7 +69,7 @@ const mockAutomations: Automation[] = [
     ],
     linkedCredentials: ["twitter-creds"],
     nodes: [],
-    edges: []
+    edges: [],
   },
 ];
 
@@ -198,7 +198,7 @@ export default function App() {
 
 function render() {
   const root = ReactDOM.createRoot(document.getElementById("app"));
-  root.render(<App/>);
+  root.render(<App />);
 }
 
 render();
