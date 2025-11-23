@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -190,4 +189,3 @@
 html {
   font-size: var(--font-size);
 }
-

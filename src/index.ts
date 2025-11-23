@@ -18,6 +18,12 @@ if (require("electron-squirrel-startup")) {
 
 let browserWin: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
+let currentNodeId: string | null = null;
+let currentIndex: Record<string, number> | null = null;
+
+function injectIndexIntoSelector(selector: string, index: number): string {
+  return selector.replace(/\$\{index\}/g, index.toString());
+}
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -36,6 +42,57 @@ const createWindow = (): void => {
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
 };
+
+// Helper to create/open browser (avoids duplication with browser:open)
+async function ensureBrowserOpen(url: string = "https://www.google.com/") {
+  if (browserWin) return;
+
+  browserWin = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      nodeIntegration: true, // Required for require('electron') in injected script
+      contextIsolation: false, // Allows direct Node access (internal tool—use preload in prod)
+    },
+  });
+
+  await browserWin.loadURL(url);
+  injectSearchBar(browserWin);
+  browserWin.on("closed", () => {
+    browserWin = null;
+    if (mainWindow) {
+      mainWindow.webContents.send("browser:closed");
+    }
+  });
+}
+
+function injectSearchBar(win: BrowserWindow) {
+  win.webContents.on("did-finish-load", () => {
+    const searchBarScript = `
+      if (document.getElementById('electron-search-bar')) return; // Avoid duplicates
+      const bar = document.createElement('div');
+      bar.id = 'electron-search-bar';
+      bar.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 40px; background: #f8f9fa; z-index: 10000; display: flex; align-items: center; padding: 0 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-bottom: 1px solid #dee2e6;';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Enter URL (e.g., google.com)';
+      input.style.cssText = 'flex: 1; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px 0 0 4px; font-size: 14px; outline: none;';
+      input.onkeydown = (e) => { if (e.key === 'Enter') input.parentNode.lastChild.click(); };
+      const btn = document.createElement('button');
+      btn.textContent = 'Go';
+      btn.style.cssText = 'padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 14px;';
+      btn.onclick = () => {
+        const url = input.value.trim();
+        if (url && window.electronBrowserAPI && window.electronBrowserAPI.navigate) {
+          window.electronBrowserAPI.navigate(url);
+        }
+      };
+      bar.append(input, btn);
+      document.body.prepend(bar);
+    `;
+    win.webContents.executeJavaScript(searchBarScript).catch(console.error);
+  });
+}
 
 ipcMain.handle("browser:open", async (_event, url: string) => {
   if (browserWin) return;
@@ -81,6 +138,18 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       await wc.loadURL(step.value);
       break;
     case "click":
+      if (step.selector.includes("${index}")) {
+        const effectiveSelector = injectIndexIntoSelector(
+          step.selector,
+          currentIndex[currentNodeId!] as number
+          // currentIndex as number
+        );
+        console.log("Effective selector:", effectiveSelector);
+        await wc.executeJavaScript(`
+          document.querySelector("${effectiveSelector}")?.click();
+        `);
+        break;
+      }
       await wc.executeJavaScript(`
         document.querySelector("${step.selector}")?.click();
       `);
@@ -102,6 +171,14 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
       break;
     case "screenshot":
       const img = await wc.capturePage();
+      if (!step.savePath) {
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[-:.]/g, "")
+          .slice(0, 15);
+        step.savePath = `screenshot_${timestamp}.png`;
+      }
+      await require("fs").promises.writeFile(step.savePath, img.toPNG());
       return img.toPNG().toString("base64");
     case "extract":
       return await wc.executeJavaScript(`
@@ -208,24 +285,63 @@ ipcMain.handle("browser:runStep", async (_event, step) => {
 
 ipcMain.handle(
   "browser:runConditional",
-  async (_event, { conditionType, selector, expectedValue }) => {
+  async (
+    _event,
+    {
+      conditionType,
+      selector,
+      expectedValue,
+      nodeId,
+      maxIterations,
+      increment,
+      startIndex,
+    }
+  ) => {
     if (!browserWin) return;
 
     const wc = browserWin.webContents;
     let conditionResult = false;
 
-    if (conditionType === "elementExists") {
+    if (currentIndex === null || currentIndex[nodeId!] === undefined) {
+      currentIndex = currentIndex || {};
+      currentIndex[nodeId!] = startIndex || 1;
+      currentNodeId = nodeId;
+    } else if (
+      maxIterations !== undefined &&
+      currentIndex[nodeId!] > maxIterations
+    ) {
+      currentIndex[nodeId!] = startIndex || 1;
+      return {
+        conditionResult: false,
+        currentIndex,
+        effectiveSelector: null,
+      };
+    } else {
+      currentIndex[nodeId!] += increment || 1;
+    }
+
+    const effectiveSelector = injectIndexIntoSelector(
+      selector,
+      currentIndex[nodeId] as number
+    );
+
+    if (
+      conditionType === "elementExists" ||
+      conditionType === "loopUntilFalse"
+    ) {
       conditionResult = await wc.executeJavaScript(`
-      !!document.querySelector("${selector}");
+      !!document.querySelector("${effectiveSelector}");
     `);
     } else if (conditionType === "valueMatches") {
       const value = await wc.executeJavaScript(`
-      document.querySelector("${selector}")?.innerText || "";
+      document.querySelector("${effectiveSelector}")?.innerText || "";
     `);
       conditionResult = value === expectedValue;
     }
 
-    return conditionResult;
+    return conditionType === "loopUntilFalse"
+      ? { conditionResult, currentIndex, effectiveSelector }
+      : conditionResult;
   }
 );
 
@@ -250,6 +366,189 @@ async function executeSubStep(wc: any, step: any, index?: number) {
       return null;
   }
 }
+
+// New: IPC for picking selector
+ipcMain.handle("pick-selector", async (__event, url: string) => {
+  if (!mainWindow) throw new Error("Main window not available");
+
+  // Open browser if not open (uses consistent prefs)
+  await ensureBrowserOpen(url);
+
+  // Focus the browser window
+  browserWin?.focus();
+
+  return new Promise<string | null>(async (resolve) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve(null); // Timeout -> null
+    }, 60000); // 1 min timeout
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      ipcMain.removeListener("selector-picked", onPick);
+      ipcMain.removeListener("selector-cancel", onCancel);
+    };
+
+    const onPick = (_event: any, selector: string) => {
+      cleanup();
+      // if the selector is selectOption element send index, value and selector
+      if (selector.includes("select")) {
+        const indexScript = `
+          (() => {
+            const select = document.querySelector("${selector}");
+            if (select) {
+              return {
+                optionIndex: select.selectedIndex,
+                optionValue: select.value,
+              };
+            }
+            return null;
+          })();
+        `;
+        browserWin?.webContents.executeJavaScript(indexScript).then((res) => {
+          if (res) {
+            resolve(`${selector}||${res.optionIndex}||${res.optionValue}`);
+          } else {
+            resolve(selector);
+          }
+        });
+        return;
+      }
+      resolve(selector);
+    };
+
+    const onCancel = (_event: any) => {
+      cleanup();
+      resolve(null);
+    };
+
+    ipcMain.once("selector-picked", onPick);
+    ipcMain.once("selector-cancel", onCancel);
+
+    // Inject the picker script (with try-catch for robustness)
+    const pickerScript = `
+      try {
+        // Refined: Prefer structural selectors like DevTools (unique tag or :nth-of-type/:first-of-type)
+        function getUniqueSelector(parent, el) {
+          if (!parent || !el) return el.tagName.toLowerCase();
+          let tag = el.tagName.toLowerCase();
+          // Special case: body is always plain (unique under html)
+          if (tag === 'body') return 'body';
+          // 1. Plain tag if unique in parent
+          if (parent.querySelector(tag) === el) return tag;
+          // 2. Calculate nth-of-type
+          let nthType = 1;
+          let sib = el.previousElementSibling;
+          while (sib) {
+            if (sib.tagName === el.tagName) nthType++;
+            sib = sib.previousElementSibling;
+          }
+          // Use :first-of-type for nth=1, :nth-of-type(n) otherwise
+          let nthTypeSel = tag + (nthType === 1 ? ':first-of-type' : ':nth-of-type(' + nthType + ')');
+          // Confirm uniqueness (should always be true by construction)
+          if (parent.querySelector(nthTypeSel) === el) return nthTypeSel;
+          // Fallback: plain nth (rare)
+          return nthTypeSel;
+        }
+
+        // Main generator: Build full path from html
+        function generateCSSSelector(el) {
+          if (!el || el.nodeType !== 1) return '';
+          let parts = [];
+          let current = el;
+          while (current.parentElement && current.parentElement.nodeType === 1) {
+            let rel = getUniqueSelector(current.parentElement, current);
+            parts.unshift(rel);
+            current = current.parentElement;
+          }
+          // Prepend html (loop adds body as first part)
+          parts.unshift('html');
+          return parts.join(' > ');
+        }
+
+        // Add highlight styles
+        const style = document.createElement('style');
+        style.id = 'picker-style';
+        style.textContent = '* { transition: outline 0.2s ease !important; } .picker-highlight { outline: 3px solid #ff0000 !important; background: rgba(255, 0, 0, 0.1) !important; z-index: 999999 !important; } #picker-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999998; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-family: sans-serif; pointer-events: none; }';
+        document.head.appendChild(style);
+
+        // Instructional overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'picker-overlay';
+        overlay.textContent = 'Click on the element to select its CSS selector. Press Escape to cancel.';
+        document.body.appendChild(overlay);
+
+        // Highlight on hover
+        function handleMouseOver(e) {
+          e.target.classList.add('picker-highlight');
+        }
+        function handleMouseOut(e) {
+          e.target.classList.remove('picker-highlight');
+        }
+        document.addEventListener('mouseover', handleMouseOver, true);
+        document.addEventListener('mouseout', handleMouseOut, true);
+
+        // Capture click
+        function handleClick(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const el = e.target;
+          el.classList.remove('picker-highlight');
+          const selector = generateCSSSelector(el);
+          // Cleanup
+          const style = document.getElementById('picker-style');
+          if (style) style.remove();
+          const overlay = document.getElementById('picker-overlay');
+          if (overlay) overlay.remove();
+          document.querySelectorAll('.picker-highlight').forEach(function(elem) { elem.classList.remove('picker-highlight'); });
+          // Remove listeners
+          document.removeEventListener('mouseover', handleMouseOver, true);
+          document.removeEventListener('mouseout', handleMouseOut, true);
+          document.removeEventListener('click', handleClick, true);
+          document.removeEventListener('keydown', handleKeydown, true);
+          // Send back
+          require('electron').ipcRenderer.send('selector-picked', selector);
+        }
+        document.addEventListener('click', handleClick, true);
+
+        // Escape to cancel
+        function handleKeydown(e) {
+          if (e.key === 'Escape') {
+            // Cleanup
+            const style = document.getElementById('picker-style');
+            if (style) style.remove();
+            const overlay = document.getElementById('picker-overlay');
+            if (overlay) overlay.remove();
+            document.querySelectorAll('.picker-highlight').forEach(function(elem) { elem.classList.remove('picker-highlight'); });
+            // Remove listeners
+            document.removeEventListener('mouseover', handleMouseOver, true);
+            document.removeEventListener('mouseout', handleMouseOut, true);
+            document.removeEventListener('click', handleClick, true);
+            document.removeEventListener('keydown', handleKeydown, true);
+            require('electron').ipcRenderer.send('selector-cancel');
+          }
+        }
+        document.addEventListener('keydown', handleKeydown, true);
+      } catch (e) {
+        console.error('Picker script error:', e);
+        if (typeof require === 'function') {
+          require('electron').ipcRenderer.send('picker-error', e.message || e.toString());
+        }
+      }
+    `;
+
+    if (browserWin) {
+      try {
+        await browserWin.webContents.executeJavaScript(pickerScript);
+      } catch (err) {
+        console.error("Failed to inject picker script:", err);
+        resolve(null);
+      }
+    } else {
+      resolve(null);
+    }
+  });
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

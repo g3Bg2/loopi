@@ -54,6 +54,7 @@ import { stepTypes } from "../types/types";
 import NodeDetails from "./automationBuilder/NodeDetails";
 import AddStepPopup from "./automationBuilder/AddStepPopup";
 import AutomationNode from "./automationBuilder/AutomationNode";
+import { set } from "react-hook-form/dist";
 
 const nodeTypes = {
   automationStep: AutomationNode,
@@ -88,7 +89,7 @@ export function AutomationBuilder({
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isAutomationRunning, setIsAutomationRunning] = useState(false);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
-  const stopGraphExecutionRef  = useRef(false);
+  const stopGraphExecutionRef = useRef(false);
 
   // Enhanced onConnect with connection restrictions and labels for "if"/"else"
   const onConnect = useCallback(
@@ -210,6 +211,44 @@ export function AutomationBuilder({
       setNodes((currentNodes) => {
         const sourceNode = currentNodes.find((n) => n.id === sourceId);
         console.log("currentNodes", currentNodes);
+
+        // check if sourceNode can have more nodes connected
+        if (sourceNode) {
+          if (sourceNode.type === "conditional") {
+            let maxOutgoing = false;
+            setEdges((edges) => {
+              const outgoingEdges = edges.filter((e) => e.source === sourceId);
+
+              if (outgoingEdges.length >= 2) {
+                alert(
+                  "Cannot add more than two outgoing edges from a conditional node."
+                );
+                maxOutgoing = true;
+                return edges; // Return unchanged
+              }
+
+              return edges;
+            });
+            if (maxOutgoing) return currentNodes;
+          } else {
+            let maxOutgoing = false;
+            setEdges((edges) => {
+              const outgoingCount = edges.filter(
+                (e) => e.source === sourceId && !e.sourceHandle
+              ).length;
+              if (outgoingCount >= 1) {
+                alert(
+                  "Cannot add more than one outgoing edge from a non-conditional node."
+                );
+                maxOutgoing = true;
+                return edges; // Return unchanged
+              }
+              return edges;
+            });
+            if (maxOutgoing) return currentNodes;
+          }
+        }
+
         const newNode: ReactFlowNode = {
           id: newId,
           type: type === "conditional" ? "conditional" : "automationStep",
@@ -266,10 +305,7 @@ export function AutomationBuilder({
               );
 
               if (outgoingEdges.length >= 2) {
-                alert(
-                  "Cannot add more than two outgoing edges from a conditional node"
-                );
-                return currentEdges; // Return unchanged
+                return currentEdges;
               }
 
               const handle = outgoingEdges.length === 0 ? "if" : "else";
@@ -291,9 +327,6 @@ export function AutomationBuilder({
                 (e) => e.source === sourceId && !e.sourceHandle
               ).length;
               if (outgoingCount >= 1) {
-                alert(
-                  "Cannot add more than one outgoing edge from a non-conditional node"
-                );
                 return currentEdges;
               }
               return addEdge(
@@ -465,13 +498,33 @@ export function AutomationBuilder({
     if (node.type === "automationStep" && node.data.step) {
       return await (window as any).electronAPI.runStep(node.data.step);
     } else if (node.type === "conditional") {
-      const conditionResult = await (window as any).electronAPI.runConditional({
+      let startIndex = node.data.startIndex || 1;
+      let increment = node.data.increment || 1;
+      const maxIterations = node.data.maxIterations || 100;
+
+      const conditionParams = {
         conditionType: node.data.conditionType,
         selector: node.data.selector,
         expectedValue: node.data.expectedValue,
-      });
-      console.log("Condition result:", conditionResult);
-      return { conditionResult };
+        nodeId: node.id,
+        maxIterations,
+        increment,
+        startIndex,
+      };
+
+      console.log("Running conditional with params:", conditionParams);
+
+      const {
+        conditionResult,
+        currentIndex: usedIndex,
+        effectiveSelector,
+      } = await (window as any).electronAPI.runConditional(conditionParams);
+
+      return {
+        conditionResult,
+        isLoop: node.data.conditionType === "loopUntilFalse",
+        usedIndex,
+      };
     }
   };
 
@@ -748,7 +801,18 @@ export function AutomationBuilder({
         {/* Node details panel on top-right */}
         {selectedNodeId && selectedNode && (
           <div className="absolute top-4 right-4 z-50 w-80">
-            <NodeDetails node={selectedNode} onUpdate={handleNodeAction} />
+            <NodeDetails
+              node={selectedNode}
+              onUpdate={handleNodeAction}
+              setBrowserOpen={setIsBrowserOpen}
+              recentUrl={
+                nodes
+                  .filter((n) => n.data.step?.type === "navigate")
+                  .map((n) => n.data.step?.value)
+                  .filter(Boolean)
+                  .pop() || "https://"
+              }
+            />
           </div>
         )}
       </div>

@@ -10,11 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Trash2 } from "lucide-react";
+import { Trash2, Target } from "lucide-react"; // Added Target icon for the pick button
 
 export default function NodeDetails({
   node,
   onUpdate,
+  setBrowserOpen,
+  recentUrl,
 }: {
   node: ReactFlowNode;
   onUpdate: (
@@ -22,8 +24,48 @@ export default function NodeDetails({
     type: "update" | "delete",
     updates?: Partial<Node["data"]>
   ) => void;
+  setBrowserOpen: (isOpen: boolean) => void;
+  recentUrl: string;
 }) {
   const { data, id } = node;
+
+  // Helper function to handle picking a selector
+  const handlePickSelector = async (setter: (selector: string) => void) => {
+    if (!(window as any).electronAPI?.pickSelector) {
+      alert("Electron API not available. Ensure the browser is set up.");
+      return;
+    }
+    try {
+      const selector = await (window as any).electronAPI.pickSelector(
+        recentUrl
+      );
+      if (selector) {
+        if (data.step?.type === "selectOption") {
+          const sel = selector.toString().split("||");
+          setter(sel[0]);
+          onUpdate(id, "update", {
+            step: {
+              ...data.step,
+              selector: sel[0],
+              optionIndex: sel[1] ? parseInt(sel[1]) : undefined,
+              optionValue: sel[2] || "",
+            },
+          });
+          console.log("Option selector picked:", selector);
+        } else {
+          setter(selector);
+        }
+      }
+      // Refocus main window (your React app)
+      (window as any).electronAPI.focusMainWindow?.(); // Add this IPC if needed
+    } catch (err: any) {
+      console.error("Selector pick failed:", err);
+      alert(
+        err.message ||
+          "Failed to pick selector. Ensure the browser is open and try again."
+      );
+    }
+  };
 
   return (
     <Card className="w-80 max-h-[80vh] overflow-y-auto">
@@ -78,19 +120,38 @@ export default function NodeDetails({
             )}
             {(data.step.type === "click" ||
               data.step.type === "type" ||
-              data.step.type === "extractWithLogic") && (
+              data.step.type === "extractWithLogic" ||
+              data.step.type === "selectOption") && (
               <div className="space-y-2">
                 <Label className="text-xs">CSS Selector</Label>
-                <Input
-                  value={data.step.selector || ""}
-                  placeholder="CSS Selector"
-                  onChange={(e) => {
-                    onUpdate(id, "update", {
-                      step: { ...data.step, selector: e.target.value },
-                    });
-                  }}
-                  className="text-xs"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={data.step.selector || ""}
+                    placeholder="CSS Selector"
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        step: { ...data.step, selector: e.target.value },
+                      });
+                    }}
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      setBrowserOpen(true);
+                      await handlePickSelector((selector) =>
+                        onUpdate(id, "update", {
+                          step: { ...data.step, selector },
+                        })
+                      );
+                    }}
+                    title="Pick element from browser"
+                  >
+                    <Target className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             )}
             {data.step.type === "type" && (
@@ -107,6 +168,40 @@ export default function NodeDetails({
                   className="text-xs"
                 />
               </div>
+            )}
+            {data.step.type === "selectOption" && (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs">Option Value</Label>
+                  <Input
+                    value={data.step.optionValue || ""}
+                    placeholder="Option value to select"
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        step: { ...data.step, optionValue: e.target.value },
+                      });
+                    }}
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Option Index</Label>
+                  <Input
+                    type="number"
+                    value={data.step.optionIndex || ""}
+                    placeholder="Option index to select"
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        step: {
+                          ...data.step,
+                          optionIndex: Number(e.target.value),
+                        },
+                      });
+                    }}
+                    className="text-xs"
+                  />
+                </div>
+              </>
             )}
             {data.step.type === "wait" && (
               <div className="space-y-2">
@@ -159,23 +254,83 @@ export default function NodeDetails({
                 <SelectContent>
                   <SelectItem value="elementExists">Element Exists</SelectItem>
                   <SelectItem value="valueMatches">Value Matches</SelectItem>
+                  <SelectItem value="loopUntilFalse">
+                    Loop Until False (Dynamic Index)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Selector</Label>
-              <Input
-                value={data.selector || ""}
-                onChange={(e) => {
-                  onUpdate(id, "update", {
-                    selector: e.target.value,
-                  });
-                }}
-                placeholder="CSS Selector"
-                className="text-xs"
-              />
-            </div>
-            {data.conditionType === "valueMatches" && (
+            {["elementExists", "valueMatches"].includes(
+              data.conditionType || ""
+            ) && (
+              <div className="space-y-2">
+                <Label className="text-xs">CSS Selector</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={data.selector || ""}
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        selector: e.target.value,
+                      });
+                    }}
+                    placeholder="CSS Selector"
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handlePickSelector((selector) =>
+                        onUpdate(id, "update", { selector })
+                      )
+                    }
+                    title="Pick element from browser"
+                  >
+                    <Target className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            {["loopUntilFalse"].includes(data.conditionType || "") && (
+              <div className="space-y-2">
+                <Label className="text-xs">
+                  Selector (use {"${index}"} for dynamic position)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={data.selector || ""}
+                    onChange={(e) => {
+                      onUpdate(id, "update", {
+                        selector: e.target.value,
+                      });
+                    }}
+                    placeholder="e.g., .inventory_list > div:nth-of-type(${index})"
+                    className="text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handlePickSelector((selector) =>
+                        onUpdate(id, "update", { selector })
+                      )
+                    }
+                    title="Pick element from browser"
+                  >
+                    <Target className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Picker generates static path; manually add {"${index}"} for
+                  looping.
+                </p>
+              </div>
+            )}
+            {["valueMatches", "loopUntilFalse"].includes(
+              data.conditionType || ""
+            ) && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs">Condition</Label>
@@ -211,6 +366,65 @@ export default function NodeDetails({
                     className="text-xs"
                   />
                 </div>
+              </div>
+            )}
+            {data.conditionType === "loopUntilFalse" && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-xs">Loop Settings</Label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Start Index
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.startIndex || 1}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          startIndex: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      min={0}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Increment
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.increment || 1}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          increment: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      min={1}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">
+                      Max Iterations
+                    </Label>
+                    <Input
+                      type="number"
+                      value={data.maxIterations || 100}
+                      onChange={(e) =>
+                        onUpdate(id, "update", {
+                          maxIterations: parseInt(e.target.value) || 100,
+                        })
+                      }
+                      min={1}
+                      className="text-xs h-6"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Loops while condition true; connect "if" to actions, edge back
+                  here. "Else" for exit.
+                </p>
               </div>
             )}
           </>
