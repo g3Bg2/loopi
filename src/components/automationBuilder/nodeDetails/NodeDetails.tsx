@@ -28,7 +28,9 @@ export default function NodeDetails({
       return;
     }
     try {
-      const selector = await (window as any).electronAPI.pickSelector(recentUrl);
+      // Ensure recentUrl is a valid string
+      const urlToOpen = typeof recentUrl === 'string' && recentUrl ? recentUrl : "https://";
+      const selector = await (window as any).electronAPI.pickSelector(urlToOpen);
       if (selector) {
         if (data.step?.type === "selectOption") {
           const sel = selector.toString().split("||");
