@@ -51,8 +51,9 @@ async function ensureBrowserOpen(url: string = "https://www.google.com/") {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true, // Required for require('electron') in injected script
-      contextIsolation: false, // Allows direct Node access (internal tool—use preload in prod)
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
@@ -101,6 +102,8 @@ ipcMain.handle("browser:open", async (_event, url: string) => {
     width: 1200,
     height: 800,
     webPreferences: {
+      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      contextIsolation: true,
       nodeIntegration: false,
     },
   });
@@ -506,8 +509,10 @@ ipcMain.handle("pick-selector", async (__event, url: string) => {
           document.removeEventListener('mouseout', handleMouseOut, true);
           document.removeEventListener('click', handleClick, true);
           document.removeEventListener('keydown', handleKeydown, true);
-          // Send back
-          require('electron').ipcRenderer.send('selector-picked', selector);
+          // Send back via exposed electronAPI
+          if (window.electronAPI && window.electronAPI.sendSelector) {
+            window.electronAPI.sendSelector(selector);
+          }
         }
         document.addEventListener('click', handleClick, true);
 
@@ -525,15 +530,14 @@ ipcMain.handle("pick-selector", async (__event, url: string) => {
             document.removeEventListener('mouseout', handleMouseOut, true);
             document.removeEventListener('click', handleClick, true);
             document.removeEventListener('keydown', handleKeydown, true);
-            require('electron').ipcRenderer.send('selector-cancel');
+            if (window.electronAPI && window.electronAPI.cancelSelector) {
+              window.electronAPI.cancelSelector();
+            }
           }
         }
         document.addEventListener('keydown', handleKeydown, true);
       } catch (e) {
         console.error('Picker script error:', e);
-        if (typeof require === 'function') {
-          require('electron').ipcRenderer.send('picker-error', e.message || e.toString());
-        }
       }
     `;
 
