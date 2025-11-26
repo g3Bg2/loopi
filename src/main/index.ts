@@ -1,0 +1,53 @@
+import { app, BrowserWindow } from "electron";
+import { WindowManager } from "./windowManager";
+import { AutomationExecutor } from "./automationExecutor";
+import { SelectorPicker } from "./selectorPicker";
+import { registerIPCHandlers } from "./ipcHandlers";
+
+/**
+ * Main process entry point
+ * Manages application lifecycle and coordinates core services
+ */
+
+// Fix for Linux sandbox issues
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("--no-sandbox");
+}
+
+// Handle auto-update installation on Windows
+if (require("electron-squirrel-startup")) {
+  app.quit();
+}
+
+// Initialize core services
+const windowManager = new WindowManager();
+const executor = new AutomationExecutor();
+const picker = new SelectorPicker();
+
+// Register all IPC communication handlers
+registerIPCHandlers(windowManager, executor, picker);
+
+/**
+ * Application ready - create main window
+ */
+app.on("ready", () => {
+  windowManager.createMainWindow();
+});
+
+/**
+ * Quit when all windows are closed (except on macOS)
+ */
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
+/**
+ * Re-create window when dock icon is clicked (macOS)
+ */
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    windowManager.createMainWindow();
+  }
+});
