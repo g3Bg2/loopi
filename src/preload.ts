@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   runStep: (step: any) => ipcRenderer.invoke("browser:runStep", step),
   runConditional: (condition: any) =>
     ipcRenderer.invoke("browser:runConditional", condition),
+  initVariables: (vars?: Record<string, string>) => ipcRenderer.invoke("executor:initVariables", vars),
+  getVariables: () => ipcRenderer.invoke("executor:getVariables"),
   onBrowserClosed: (callback: () => void) =>
     ipcRenderer.on("browser:closed", callback),
   pickSelector: (url: string) => ipcRenderer.invoke("pick-selector", url),

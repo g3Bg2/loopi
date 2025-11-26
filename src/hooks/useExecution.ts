@@ -76,26 +76,17 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
       if (node.type === "automationStep" && node.data.step) {
         return await (window as any).electronAPI.runStep(node.data.step);
       } else if (node.type === "conditional") {
-        let startIndex = node.data.startIndex || 1;
-        let increment = node.data.increment || 1;
-        const maxIterations = node.data.maxIterations || 100;
 
         const conditionParams = {
           conditionType: node.data.conditionType,
           selector: node.data.selector,
-          expectedValue: node.data.expectedValue,
-          nodeId: node.id,
-          maxIterations,
-          increment,
-          startIndex,
+          expectedValue: node.data.expectedValue
         };
 
-        const { conditionResult, currentIndex: usedIndex, effectiveSelector } = await (window as any).electronAPI.runConditional(conditionParams);
+        const { conditionResult, effectiveSelector } = await (window as any).electronAPI.runConditional(conditionParams);
 
         return {
-          conditionResult,
-          isLoop: node.data.conditionType === "loopUntilFalse",
-          usedIndex,
+          conditionResult
         };
       }
     },
@@ -110,6 +101,18 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
 
     if (!isBrowserOpen) {
       await openBrowser();
+    }
+
+    // Initialize executor variables from automation-level variables if provided
+    try {
+      // Collect automation-level variables from nodes or a top-level automation export
+      // For now, look for a node with type 'automationVars' or fall back to none
+      const vars: Record<string, string> | undefined = (window as any).automation?.variables;
+      if ((window as any).electronAPI?.initVariables) {
+        await (window as any).electronAPI.initVariables(vars);
+      }
+    } catch (e) {
+      console.debug("Failed to init executor variables:", e);
     }
 
     setIsAutomationRunning(true);

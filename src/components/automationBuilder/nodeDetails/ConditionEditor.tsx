@@ -10,7 +10,6 @@ import { SelectorButton } from "./customComponents";
  * Supports three condition types:
  * - elementExists: Check if element is present in DOM
  * - valueMatches: Compare element text content against expected value
- * - loopUntilFalse: Dynamic iteration with ${index} template variable
  */
 export default function ConditionEditor({
   node,
@@ -34,11 +33,10 @@ export default function ConditionEditor({
           <SelectContent>
             <SelectItem value="elementExists">Element Exists</SelectItem>
             <SelectItem value="valueMatches">Value Matches</SelectItem>
-            <SelectItem value="loopUntilFalse">Loop Until False (Dynamic Index)</SelectItem>
           </SelectContent>
         </Select>
       </div>
-
+      
       {(["elementExists", "valueMatches"].includes(data.conditionType || "")) && (
         <div className="space-y-2">
           <Label className="text-xs">CSS Selector</Label>
@@ -54,23 +52,7 @@ export default function ConditionEditor({
         </div>
       )}
 
-      {(["loopUntilFalse"].includes(data.conditionType || "")) && (
-        <div className="space-y-2">
-          <Label className="text-xs">Selector (use {"${index}"} for dynamic position)</Label>
-          <div className="flex gap-2">
-            <Input
-              value={data.selector || ""}
-              onChange={(e) => onUpdate(id, "update", { selector: e.target.value })}
-              placeholder="e.g., .inventory_list > div:nth-of-type(${index})"
-              className="text-xs flex-1"
-            />
-            <SelectorButton onPick={async () => onPickWithSetter((selector) => onUpdate(id, "update", { selector }))} />
-          </div>
-          <p className="text-xs text-muted-foreground">Picker generates static path; manually add {"${index}"} for looping.</p>
-        </div>
-      )}
-
-      {(["valueMatches", "loopUntilFalse"].includes(data.conditionType || "")) && (
+      {data.conditionType === "valueMatches" && (
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-xs">Condition</Label>
@@ -93,26 +75,55 @@ export default function ConditionEditor({
         </div>
       )}
 
-      {data.conditionType === "loopUntilFalse" && (
-        <div className="space-y-2 pt-2 border-t">
-          <Label className="text-xs">Loop Settings</Label>
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Start Index</Label>
-              <Input type="number" value={data.startIndex || 1} onChange={(e) => onUpdate(id, "update", { startIndex: parseInt(e.target.value) || 1 })} min={0} className="text-xs h-6" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Increment</Label>
-              <Input type="number" value={data.increment || 1} onChange={(e) => onUpdate(id, "update", { increment: parseInt(e.target.value) || 1 })} min={1} className="text-xs h-6" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Max Iterations</Label>
-              <Input type="number" value={data.maxIterations || 100} onChange={(e) => onUpdate(id, "update", { maxIterations: parseInt(e.target.value) || 100 })} min={1} className="text-xs h-6" />
-            </div>
+      <div className="space-y-2 mt-4">
+        <Label className="text-xs">Transform extracted value</Label>
+        <p className="text-[11px] text-muted-foreground">Optionally clean up or convert the extracted text before comparing.</p>
+        <div className="grid grid-cols-1 gap-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground">Regex replace (pattern)</Label>
+            <Input
+              value={data.transform?.regex || ""}
+              onChange={(e) => onUpdate(id, "update", { transform: { ...(data.transform || {}), regex: e.target.value } })}
+              placeholder="e.g. $ or ,"
+              className="text-xs"
+            />
+            <Label className="text-[10px] text-muted-foreground">Replacement</Label>
+            <Input
+              value={data.transform?.replace || ""}
+              onChange={(e) => onUpdate(id, "update", { transform: { ...(data.transform || {}), replace: e.target.value } })}
+              placeholder="e.g. empty to remove"
+              className="text-xs"
+            />
           </div>
-          <p className="text-[10px] text-muted-foreground">Loops while condition true; connect "if" to actions, edge back here. "Else" for exit.</p>
+          <div className="flex gap-2 items-center">
+            <input
+              id={`parseNumber-${id}`}
+              type="checkbox"
+              checked={!!data.transform?.parseNumber}
+              onChange={(e) => onUpdate(id, "update", { transform: { ...(data.transform || {}), parseNumber: e.target.checked } })}
+            />
+            <Label htmlFor={`parseNumber-${id}`} className="text-xs">Parse number (strip non-numeric characters)</Label>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground">Strip characters (literal)</Label>
+            <Input
+              value={data.transform?.stripChars || ""}
+              onChange={(e) => onUpdate(id, "update", { transform: { ...(data.transform || {}), stripChars: e.target.value } })}
+              placeholder="e.g. $ ,"
+              className="text-xs"
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <input
+              id={`toLower-${id}`}
+              type="checkbox"
+              checked={!!data.transform?.toLower}
+              onChange={(e) => onUpdate(id, "update", { transform: { ...(data.transform || {}), toLower: e.target.checked } })}
+            />
+            <Label htmlFor={`toLower-${id}`} className="text-xs">Case-insensitive compare</Label>
+          </div>
         </div>
-      )}
+      </div>
     </>
   );
 }

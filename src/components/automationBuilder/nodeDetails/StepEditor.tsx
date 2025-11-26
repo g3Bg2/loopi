@@ -9,6 +9,8 @@ import {
   WaitStep,
   ScreenshotStep,
 } from "./stepTypes";
+import { ModifyVariableStep } from "./stepTypes";
+import { SetVariableStep } from "./stepTypes";
 
 /**
  * StepEditor - Dynamic editor for automation step configuration
@@ -44,6 +46,10 @@ export default function StepEditor({
         return <WaitStep step={step} id={id} onUpdate={onUpdate} />;
       case "screenshot":
         return <ScreenshotStep step={step} id={id} onUpdate={onUpdate} />;
+      case "modifyVariable":
+        return <ModifyVariableStep step={step} id={id} onUpdate={onUpdate} />;
+      case "setVariable":
+        return <SetVariableStep step={step} id={id} onUpdate={onUpdate} />;
       default:
         return null;
     }

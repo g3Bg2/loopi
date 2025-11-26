@@ -295,6 +295,23 @@ export default function useNodeActions({
                           description: `${label} step`,
                           selector: "",
                         };
+                      case "setVariable":
+                        return {
+                          id: newId,
+                          type: "setVariable" as const,
+                          description: `${label} step`,
+                          variableName: "",
+                          value: "",
+                        };
+                      case "modifyVariable":
+                        return {
+                          id: newId,
+                          type: "modifyVariable" as const,
+                          description: `${label} step`,
+                          variableName: "",
+                          operation: "set" as const,
+                          value: "",
+                        };
                       default:
                         return {
                           id: newId,

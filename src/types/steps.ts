@@ -2,21 +2,9 @@ import { Globe, Mouse, Type as TypeIcon, Clock, Camera } from "lucide-react";
 
 /**
  * Automation Step Type System
- * 
+ *
  * This module defines a discriminated union for all automation step types.
  * Each step has a unique 'type' field that TypeScript uses for type narrowing.
- * 
- * Usage:
- *   switch (step.type) {
- *     case "navigate":
- *       // TypeScript knows step.value exists here
- *       await loadURL(step.value);
- *       break;
- *     case "click":
- *       // TypeScript knows step.selector exists here
- *       await clickElement(step.selector);
- *       break;
- *   }
  */
 
 /** Base properties shared by all automation steps */
@@ -25,7 +13,8 @@ export interface StepBase {
   description: string;
 }
 
-/** Navigate to a URL */export interface StepNavigate extends StepBase {
+/** Navigate to a URL */
+export interface StepNavigate extends StepBase {
   type: "navigate";
   value: string; // URL
 }
@@ -102,6 +91,22 @@ export interface StepHover extends StepBase {
   selector: string;
 }
 
+// Set / define a variable (can reference other variables via {{varName}})
+export interface StepSetVariable extends StepBase {
+  type: "setVariable";
+  variableName: string;
+  value: string; // supports {{var}} substitution
+}
+
+export type ModifyOp = "set" | "increment" | "decrement" | "append";
+
+export interface StepModifyVariable extends StepBase {
+  type: "modifyVariable";
+  variableName: string;
+  operation: ModifyOp;
+  value: string; // supports {{var}} substitution
+}
+
 // Union of all supported steps used throughout the app
 export type AutomationStep =
   | StepNavigate
@@ -115,8 +120,9 @@ export type AutomationStep =
   | StepScroll
   | StepSelectOption
   | StepFileUpload
-  | StepHover;
-
+  | StepHover
+  | StepSetVariable
+  | StepModifyVariable;
 // UI meta for step type picker
 export const stepTypes = [
   { value: "navigate", label: "Navigate", icon: Globe, description: "Go to a URL" },
@@ -125,4 +131,6 @@ export const stepTypes = [
   { value: "selectOption", label: "Select Option", icon: TypeIcon, description: "Select an option from a dropdown" },
   { value: "wait", label: "Wait", icon: Clock, description: "Wait for a duration" },
   { value: "screenshot", label: "Screenshot", icon: Camera, description: "Take a screenshot" },
+  { value: "setVariable", label: "Set Variable", icon: TypeIcon, description: "Define or update a variable" },
+  { value: "modifyVariable", label: "Modify Variable", icon: TypeIcon, description: "Increment / decrement / edit a variable" },
 ] as const;

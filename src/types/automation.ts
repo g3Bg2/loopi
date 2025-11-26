@@ -32,6 +32,8 @@ export interface Automation {
   status: AutomationStatus;
   nodes: Node[]; // from flow.ts, re-exported via index barrel
   edges: Edge[]; // ditto
+  /** Optional runtime variables available to the automation executor */
+  variables?: Record<string, string>;
   schedule: Schedule;
   lastRun?: LastRun;
   steps: AutomationStep[]; // optional: some UIs may use this list view

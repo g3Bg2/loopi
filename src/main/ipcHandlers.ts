@@ -42,6 +42,21 @@ export function registerIPCHandlers(
   });
 
   /**
+   * Initialize executor variable context from renderer
+   */
+  ipcMain.handle("executor:initVariables", async (_event, vars: Record<string, string> | undefined) => {
+    executor.initVariables(vars);
+    return true;
+  });
+
+  /**
+   * Return a copy of current executor variables
+   */
+  ipcMain.handle("executor:getVariables", async () => {
+    return executor.getVariables();
+  });
+
+  /**
    * Evaluates a conditional node (for loops and branching logic)
    */
   ipcMain.handle("browser:runConditional", async (_event, config) => {

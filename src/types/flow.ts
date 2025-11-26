@@ -9,7 +9,7 @@ import type { AutomationStep } from "./steps";
  */
 
 /** Condition types for branching logic */
-export type ConditionType = "elementExists" | "valueMatches" | "loopUntilFalse";
+export type ConditionType = "elementExists" | "valueMatches";
 
 export interface NodePosition { x: number; y: number }
 
