@@ -8,11 +8,23 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "make:all": "electron-forge make",
+    "make:linux": "electron-forge make --platform=linux",
+    "make:windows": "electron-forge make --platform=win32",
+    "make:mac": "electron-forge make --platform=darwin",
+    "docker-build": "docker build -t automa-builder .",
     "lint": "eslint --ext .ts,.tsx .",
     "react-dev": "npx webpack serve --config webpack.dev.config.ts"
   },
   "keywords": [],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dyan-Dev/automa.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Dyan-Dev/automa/issues"
+  },
   "devDependencies": {
     "@electron-forge/cli": "^7.8.0",
     "@electron-forge/maker-deb": "^7.8.0",

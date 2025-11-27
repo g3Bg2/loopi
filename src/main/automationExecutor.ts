@@ -2,13 +2,6 @@ import { BrowserWindow } from "electron";
 import axios from "axios";
 
 /**
- * State tracker for loop/conditional node execution
- */
-interface LoopState {
-  [nodeId: string]: number;
-}
-
-/**
  * Handles execution of automation steps in the browser window
  */
 export class AutomationExecutor {
@@ -328,10 +321,6 @@ export class AutomationExecutor {
       const transformed = applyTransform(rawValue);
       const expected = expectedValue || "";
       const op = config.condition || "equals";
-
-      // console.log("Extracted Value (raw):", rawValue);
-      // console.log("Extracted Value (transformed):", transformed);
-      // console.log("Expected Value:", expected);
 
       if (config.parseAsNumber) {
       const a = parseFloat(transformed.replace(/[^0-9.\-]/g, ""));

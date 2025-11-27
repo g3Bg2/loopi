@@ -8,7 +8,6 @@ import "reactflow/dist/style.css";
 import type {
   Automation,
   AutomationStep,
-  Credential,
   Node,
   Edge,
   NodeData,
@@ -30,7 +29,6 @@ const nodeTypes = {
 
 interface AutomationBuilderProps {
   automation?: Automation;
-  credentials: Credential[];
   onSave: (automation: Automation) => void;
   onCancel: () => void;
 }
@@ -47,7 +45,6 @@ interface AutomationBuilderProps {
  */
 export function AutomationBuilder({
   automation,
-  credentials,
   onSave,
   onCancel,
 }: AutomationBuilderProps) {
@@ -59,12 +56,6 @@ export function AutomationBuilder({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   // State for tracking selected edges for deletion
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([]);
-  const [schedule, setSchedule] = useState({
-    type: "manual" as "interval" | "fixed" | "manual",
-    interval: 30,
-    unit: "minutes" as "minutes" | "hours" | "days",
-    value: "09:00",
-  });
   const { onConnect, handleNodeAction } = useNodeActions({
     nodes,
     edges,
@@ -134,28 +125,6 @@ export function AutomationBuilder({
           })
         )
       );
-      if (automation.schedule.type === "manual") {
-        setSchedule({
-          type: "manual",
-          interval: 30,
-          unit: "minutes",
-          value: "09:00",
-        });
-      } else if (automation.schedule.type === "interval") {
-        setSchedule({
-          type: "interval",
-          interval: automation.schedule.interval,
-          unit: automation.schedule.unit,
-          value: "09:00",
-        });
-      } else if (automation.schedule.type === "fixed") {
-        setSchedule({
-          type: "fixed",
-          interval: 30,
-          unit: "minutes",
-          value: automation.schedule.value,
-        });
-      }
     } else {
       // Initialize with a default navigation node
       const defaultNode: ReactFlowNode = {
@@ -186,15 +155,24 @@ export function AutomationBuilder({
       id: automation?.id || Date.now().toString(),
       name,
       description,
-      status: "idle",
       nodes: nodes.map(({ id, type, data, position }) => ({
         id,
         type,
         data: {
+          // step nodes keep their step object
           step: data.step,
+          // conditional node fields
           conditionType: data.conditionType,
           selector: data.selector,
           expectedValue: data.expectedValue,
+          // comparison operator (equals/contains/greaterThan/lessThan)
+          condition: data.condition,
+          // post-processing transform options
+          transformType: data.transformType,
+          transformPattern: data.transformPattern,
+          transformReplace: data.transformReplace,
+          transformChars: data.transformChars,
+          parseAsNumber: data.parseAsNumber,
         },
         position,
       })) as Node[],
@@ -207,23 +185,8 @@ export function AutomationBuilder({
       steps: nodes
         .map((node) => node.data.step)
         .filter((step) => step !== undefined) as AutomationStep[],
-      schedule:
-        schedule.type === "manual"
-          ? { type: "manual" }
-          : schedule.type === "fixed"
-            ? { type: "fixed", value: schedule.value }
-            : {
-                type: "interval",
-                interval: schedule.interval,
-                unit: schedule.unit,
-              },
-      linkedCredentials: nodes
-        .filter((node) => node.data.step?.type === "type" && !!(node.data.step as any).credentialId)
-        .map((node) => (node.data.step as any).credentialId as string)
-        .filter((id, index, arr) => arr.indexOf(id) === index),
-      lastRun: automation?.lastRun,
     };
-  }, [automation, name, description, nodes, edges, schedule]);
+  }, [automation, name, description, nodes, edges]);
 
   const handleSave = () => {
     onSave(serializeAutomation());
@@ -242,8 +205,6 @@ export function AutomationBuilder({
         setName={setName}
         description={description}
         setDescription={setDescription}
-        schedule={schedule}
-        setSchedule={setSchedule}
         isBrowserOpen={isBrowserOpen}
         openBrowser={openBrowser}
         closeBrowser={closeBrowser}
