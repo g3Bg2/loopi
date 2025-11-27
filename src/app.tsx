@@ -1,39 +1,11 @@
 import * as ReactDOM from "react-dom/client";
 import { useState } from "react";
 import { Dashboard } from "./components/Dashboard";
-import { CredentialVault } from "./components/CredentialVault";
 import { AutomationBuilder } from "./components/AutomationBuilder";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { Bot, Shield, Grid } from "lucide-react";
-import { Automation, Credential } from "./types";
+import { Bot, Grid } from "lucide-react";
+import { Automation } from "./types";
 import "./index.css";
-
-/**
- * Mock credentials for demonstration
- * In production, these would be stored securely and encrypted
- */
-const mockCredentials: Credential[] = [
-  {
-    id: "gmail-creds",
-    name: "Gmail Login",
-    type: "username_password",
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-    encryptedValues: {
-      username: "••••••••@gmail.com",
-      password: "••••••••",
-    },
-  },
-  {
-    id: "twitter-creds",
-    name: "Twitter API",
-    type: "api_key",
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 1 week ago
-    encryptedValues: {
-      apiKey: "••••••••••••••••",
-      apiSecret: "••••••••••••••••",
-    },
-  },
-];
 
 /**
  * App - Root application component
@@ -46,10 +18,9 @@ const mockCredentials: Credential[] = [
  */
 export default function App() {
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "credentials" | "builder"
+    "dashboard" | "builder"
   >("dashboard");
   const [automations, setAutomations] = useState<Automation[]>([]);
-  const [credentials, setCredentials] = useState<Credential[]>(mockCredentials);
   const [selectedAutomation, setSelectedAutomation] =
     useState<Automation | null>(null);
 
@@ -101,10 +72,6 @@ export default function App() {
                   <Bot className="h-4 w-4 mr-1" />
                   Builder
                 </TabsTrigger>
-                <TabsTrigger value="credentials">
-                  <Shield className="h-4 w-4 mr-1" />
-                  Credentials
-                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -118,23 +85,13 @@ export default function App() {
             automations={automations}
             onCreateAutomation={handleCreateAutomation}
             onEditAutomation={handleEditAutomation}
-            onManageCredentials={() => setCurrentView("credentials")}
             onUpdateAutomations={setAutomations}
-          />
-        )}
-
-        {currentView === "credentials" && (
-          <CredentialVault
-            credentials={credentials}
-            onUpdateCredentials={setCredentials}
-            onBack={() => setCurrentView("dashboard")}
           />
         )}
 
         {currentView === "builder" && (
           <AutomationBuilder
             automation={selectedAutomation}
-            credentials={credentials}
             onSave={handleSaveAutomation}
             onCancel={() => setCurrentView("dashboard")}
           />

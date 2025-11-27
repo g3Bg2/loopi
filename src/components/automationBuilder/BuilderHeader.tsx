@@ -4,13 +4,6 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -26,8 +19,6 @@ interface BuilderHeaderProps {
   setName: (v: string) => void;
   description: string;
   setDescription: (v: string) => void;
-  schedule: any;
-  setSchedule: (updater: any) => void;
   isBrowserOpen: boolean;
   openBrowser: () => Promise<void>;
   closeBrowser: () => Promise<void>;
@@ -56,8 +47,6 @@ export const BuilderHeader: React.FC<BuilderHeaderProps> = ({
   setName,
   description,
   setDescription,
-  schedule,
-  setSchedule,
   isBrowserOpen,
   openBrowser,
   closeBrowser,
@@ -109,37 +98,6 @@ export const BuilderHeader: React.FC<BuilderHeaderProps> = ({
                   <Label>Description</Label>
                   <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe what this automation does" rows={3} />
                 </div>
-                <div className="space-y-2">
-                  <Label>Schedule</Label>
-                  <Select value={schedule.type} onValueChange={(value) => setSchedule((prev: any) => ({ ...prev, type: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manual">Manual only</SelectItem>
-                      <SelectItem value="interval">Repeat interval</SelectItem>
-                      <SelectItem value="fixed">Fixed time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {schedule.type === "interval" && (
-                  <div className="flex gap-2">
-                    <Input type="number" value={schedule.interval} onChange={(e) => setSchedule((prev: any) => ({ ...prev, interval: parseInt(e.target.value) || 1 }))} className="flex-1" min="1" />
-                    <Select value={schedule.unit} onValueChange={(value) => setSchedule((prev: any) => ({ ...prev, unit: value }))}>
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="minutes">min</SelectItem>
-                        <SelectItem value="hours">hrs</SelectItem>
-                        <SelectItem value="days">days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                {schedule.type === "fixed" && (
-                  <Input type="time" value={schedule.value} onChange={(e) => setSchedule((prev: any) => ({ ...prev, value: e.target.value }))} />
-                )}
               </div>
             </DialogContent>
           </Dialog>
