@@ -58,7 +58,6 @@ export function AutomationBuilder({ automation, onSave, onCancel }: AutomationBu
   const {
     isBrowserOpen,
     isAutomationRunning,
-    currentNodeId,
     openBrowser,
     closeBrowser,
     runAutomation,

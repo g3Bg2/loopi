@@ -54,7 +54,12 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-4">
-            <Tabs value={currentView} onValueChange={(value) => setCurrentView(value as any)}>
+            <Tabs
+              value={currentView}
+              onValueChange={(value: string) => {
+                if (value === "dashboard" || value === "builder") setCurrentView(value);
+              }}
+            >
               <TabsList>
                 <TabsTrigger value="dashboard">
                   <Grid className="h-4 w-4 mr-1" />

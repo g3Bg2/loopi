@@ -1,26 +1,35 @@
+import type { Dispatch, SetStateAction } from "react";
 import React from "react";
+import type { NodeTypes } from "reactflow";
 import ReactFlow, {
   Background,
   Connection,
   Controls,
   MiniMap,
+  OnEdgesChange,
+  OnNodesChange,
   OnSelectionChangeParams,
 } from "reactflow";
+import type { AutomationStep, NodeData, ReactFlowEdge, ReactFlowNode } from "../../types";
 import "reactflow/dist/style.css";
 import AddStepPopup from "./AddStepPopup";
 import { NodeDetails } from "./nodeDetails";
 
 interface BuilderCanvasProps {
-  nodes: any[];
-  edges: any[];
-  onNodesChange: any;
-  onEdgesChange: any;
-  onConnect: (c: Connection) => any;
+  nodes: ReactFlowNode[];
+  edges: ReactFlowEdge[];
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: (c: Connection) => void;
   handleSelectionChange: (p: OnSelectionChangeParams) => void;
-  nodeTypes: any;
+  nodeTypes: NodeTypes | undefined;
   selectedNodeId: string | null;
-  selectedNode: any | null;
-  handleNodeAction: (sourceId: string, type: any, updates?: any) => void;
+  selectedNode: ReactFlowNode | null;
+  handleNodeAction: (
+    sourceId: string,
+    type: AutomationStep["type"] | "conditional" | "update" | "delete",
+    updates?: Partial<NodeData>
+  ) => void;
   setBrowserOpen: (arg?: boolean | string) => void;
   selectedEdgeIds: string[];
   onDeleteSelectedEdges: () => void;
@@ -68,7 +77,9 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
 
       {selectedNodeId && (
         <div className="absolute left-4 top-1/2 -translate-y-1/2 z-50">
-          <AddStepPopup onAdd={(stepType: any) => handleNodeAction(selectedNodeId, stepType)} />
+          <AddStepPopup
+            onAdd={(stepType: AutomationStep["type"]) => handleNodeAction(selectedNodeId, stepType)}
+          />
         </div>
       )}
 
@@ -81,7 +92,11 @@ export const BuilderCanvas: React.FC<BuilderCanvasProps> = ({
             recentUrl={
               nodes
                 .filter((n) => n.data?.step?.type === "navigate")
-                .map((n) => n.data?.step?.value)
+                .map((n) =>
+                  n.data?.step?.type === "navigate"
+                    ? (n.data.step as { value: string }).value
+                    : undefined
+                )
                 .filter(Boolean)
                 .pop() || "https://"
             }

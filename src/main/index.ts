@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+import squirrelStartup from "electron-squirrel-startup";
 import { AutomationExecutor } from "./automationExecutor";
 import { registerIPCHandlers } from "./ipcHandlers";
 import { SelectorPicker } from "./selectorPicker";
@@ -15,8 +16,8 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("disable-gpu");
 }
 
-// Handle auto-update installation on Windows
-if (require("electron-squirrel-startup")) {
+// Handle auto-update installation on Windows (electron-squirrel-startup)
+if (squirrelStartup) {
   app.quit();
 }
 

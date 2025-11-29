@@ -1,5 +1,7 @@
 import axios from "axios";
 import { BrowserWindow } from "electron";
+import fs from "fs";
+import { AutomationStep } from "../types/steps";
 
 /**
  * Handles execution of automation steps in the browser window
@@ -37,7 +39,7 @@ export class AutomationExecutor {
    * @param browserWindow - The browser window to execute the step in
    * @param step - The step configuration object
    */
-  async executeStep(browserWindow: BrowserWindow, step: any): Promise<any> {
+  async executeStep(browserWindow: BrowserWindow, step: AutomationStep): Promise<unknown> {
     const wc = browserWindow.webContents;
 
     switch (step.type) {
@@ -82,7 +84,7 @@ export class AutomationExecutor {
         const img = await wc.capturePage();
         const timestamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15);
         const savePath = step.savePath || `screenshot_${timestamp}.png`;
-        await require("fs").promises.writeFile(savePath, img.toPNG());
+        await fs.promises.writeFile(savePath, img.toPNG());
         return img.toPNG().toString("base64");
       }
 
@@ -104,8 +106,7 @@ export class AutomationExecutor {
         );
         let conditionMet = false;
 
-        console.log("Extracted Value:", extractedValue); // Debug log
-        console.log("Expected Value:", step.expectedValue); // Debug log
+        // Debug logs removed to avoid noisy output in production
 
         switch (step.condition) {
           case "equals":
@@ -130,7 +131,7 @@ export class AutomationExecutor {
           const url = this.substituteVariables(step.url);
           const method = step.method || "GET";
           const rawBody = step.body ? this.substituteVariables(step.body) : undefined;
-          let data: any = undefined;
+          let data: unknown = undefined;
           if (rawBody) {
             try {
               data = JSON.parse(rawBody);
@@ -140,7 +141,7 @@ export class AutomationExecutor {
           }
           const headers: Record<string, string> = {};
           if (step.headers) {
-            for (const [k, v] of Object.entries(step.headers as Record<string, any>)) {
+            for (const [k, v] of Object.entries(step.headers as Record<string, unknown>)) {
               headers[k] = this.substituteVariables(String(v));
             }
           }
@@ -150,7 +151,7 @@ export class AutomationExecutor {
             try {
               this.variables[step.storeKey] =
                 typeof dataOut === "string" ? dataOut : JSON.stringify(dataOut);
-            } catch (e) {
+            } catch (_e) {
               this.variables[step.storeKey] = String(dataOut);
             }
           }
@@ -301,7 +302,7 @@ export class AutomationExecutor {
         try {
           const re = new RegExp(config.transformPattern, "g");
           s = s.replace(re, config.transformReplace ?? "");
-        } catch (e) {
+        } catch (_e) {
           // invalid regex — leave original
         }
       }

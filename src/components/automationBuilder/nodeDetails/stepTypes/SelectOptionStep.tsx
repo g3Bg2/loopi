@@ -4,6 +4,12 @@ import { SelectorButton } from "../customComponents";
 import { StepProps } from "./types";
 
 export function SelectOptionStep({ step, id, onUpdate, onPickWithSetter }: StepProps) {
+  // Narrow the union type to the specific `selectOption` step so
+  // TypeScript knows `selector`, `optionValue`, and `optionIndex` exist.
+  if (step.type !== "selectOption") {
+    return null;
+  }
+
   return (
     <>
       <div className="space-y-2">

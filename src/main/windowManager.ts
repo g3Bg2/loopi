@@ -21,6 +21,7 @@ export class WindowManager {
         preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
         contextIsolation: true,
         webviewTag: true,
+        sandbox: false,
       },
       icon: "assets/logo.png",
     });
@@ -50,14 +51,14 @@ export class WindowManager {
         preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
         contextIsolation: true,
         nodeIntegration: false,
+        sandbox: false,
       },
       icon: "assets/logo.png",
     });
 
     await this.browserWindow.loadURL(url);
 
-    // Uncomment to debug picker script issues
-    // this.browserWindow.webContents.openDevTools();
+    // Developer note: devtools can be opened for debugging picker scripts
 
     // Store reference to avoid closure issues
     const onClosedCallback = onClosed;

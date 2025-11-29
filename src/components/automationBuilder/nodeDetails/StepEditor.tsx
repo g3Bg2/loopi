@@ -1,3 +1,10 @@
+/**
+ * StepEditor - Dynamic editor for automation step configuration
+ *
+ * Routes to appropriate step-specific editor based on step type.
+ * Each step type has its own component with custom fields and validation.
+ */
+import type { ReactFlowNode } from "../../../types";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import {
@@ -13,19 +20,17 @@ import {
   WaitStep,
 } from "./stepTypes";
 
-/**
- * StepEditor - Dynamic editor for automation step configuration
- *
- * Routes to appropriate step-specific editor based on step type.
- * Each step type has its own component with custom fields and validation.
- */
 export default function StepEditor({
   node,
   onUpdate,
   onPickWithSetter,
 }: {
-  node: any;
-  onUpdate: (id: string, type: "update", updates?: any) => void;
+  node: ReactFlowNode;
+  onUpdate: (
+    id: string,
+    type: "update",
+    updates?: import("./stepTypes/types").UpdatePayload
+  ) => void;
   onPickWithSetter: (setter: (s: string) => void) => Promise<void>;
 }) {
   const { data, id } = node;

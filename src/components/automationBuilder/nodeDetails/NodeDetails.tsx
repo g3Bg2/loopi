@@ -30,14 +30,14 @@ export default function NodeDetails({
    * Special handling for select elements to capture option data
    */
   const handlePickSelector = async (setter: (selector: string) => void) => {
-    if (!(window as any).electronAPI?.pickSelector) {
+    if (!window.electronAPI?.pickSelector) {
       alert("Electron API not available. Ensure the browser is set up.");
       return;
     }
 
     try {
       const urlToOpen = recentUrl || "https://";
-      const selector = await (window as any).electronAPI.pickSelector(urlToOpen);
+      const selector = await window.electronAPI.pickSelector(urlToOpen);
 
       if (selector) {
         // Parse select element data: "selector||optionIndex||optionValue"
@@ -57,10 +57,11 @@ export default function NodeDetails({
         }
       }
 
-      (window as any).electronAPI.focusMainWindow?.();
-    } catch (err: any) {
+      window.electronAPI?.focusMainWindow?.();
+    } catch (err: unknown) {
       console.error("Selector pick failed:", err);
-      alert(err.message || "Failed to pick selector. Ensure the browser is open and try again.");
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message || "Failed to pick selector. Ensure the browser is open and try again.");
     }
   };
 
