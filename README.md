@@ -188,9 +188,7 @@ pnpm run publish        # Build and publish (requires config)
 
 Example automation JSON files are included under `docs/examples/` to help you test common scenarios quickly.
 
-- `docs/examples/pagination.json` — clicks the "Next" button on a listing page repeatedly until no next page is available and extracts titles.
-- `docs/examples/variable_loop.json` — demonstrates initializing an `index` variable with `Set Variable`, extracting a row by `{{index}}`, and incrementing the index with `Modify Variable` to loop.
-- `docs/examples/price_extraction.json` — extracts a price string, strips currency symbols and non-numeric characters, parses it as a number, and compares against a threshold (e.g. $50).
+- `docs/examples/pagination_price_extraction_variable_loop.json`: Extract each product price across page and compare against a threshold using variable-driven loop. If price > specified amount, tick checkbox.
 
 How to use an example:
 
