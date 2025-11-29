@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react";
 import { useCallback } from "react";
 import { addEdge, Connection } from "reactflow";
 import type {
@@ -14,8 +15,8 @@ import { stepTypes } from "../types";
 interface UseNodeActionsArgs {
   nodes: ReactFlowNode[];
   edges: ReactFlowEdge[];
-  setNodes: (updater: any) => void;
-  setEdges: (updater: any) => void;
+  setNodes: Dispatch<SetStateAction<ReactFlowNode[]>>;
+  setEdges: Dispatch<SetStateAction<ReactFlowEdge[]>>;
   setSelectedNodeId: (id: string | null) => void;
 }
 
@@ -188,7 +189,8 @@ export default function useNodeActions({
                 }
               : {
                   step: (() => {
-                    const label = stepTypes.find((s) => s.value === (type as any))?.label || "Step";
+                    const label =
+                      stepTypes.find((s) => s.value === (type as string))?.label || "Step";
                     switch (type) {
                       case "navigate":
                         return {

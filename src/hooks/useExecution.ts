@@ -1,10 +1,11 @@
+import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactFlowEdge, ReactFlowNode } from "../types";
 
 interface UseExecutionArgs {
   nodes: ReactFlowNode[];
   edges: ReactFlowEdge[];
-  setNodes: (updater: any) => void;
+  setNodes: Dispatch<SetStateAction<ReactFlowNode[]>>;
 }
 
 /**
@@ -32,23 +33,20 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
       setIsAutomationRunning(false);
       setCurrentNodeId(null);
     };
-    if ((window as any).electronAPI) {
-      (window as any).electronAPI.onBrowserClosed(handleBrowserClosed);
-    }
+    // register browser closed callback if available
+    window.electronAPI?.onBrowserClosed(handleBrowserClosed);
     return () => {
-      if ((window as any).electronAPI && (window as any).electronAPI.removeBrowserClosed) {
-        try {
-          (window as any).electronAPI.removeBrowserClosed();
-        } catch (e) {
-          // ignore
-        }
+      try {
+        window.electronAPI?.removeBrowserClosed?.();
+      } catch (_e) {
+        // ignore
       }
     };
   }, []);
 
   const openBrowser = useCallback(async (url?: string) => {
     try {
-      await (window as any).electronAPI.openBrowser(url || "https://google.com");
+      await window.electronAPI?.openBrowser(url || "https://google.com");
       setIsBrowserOpen(true);
     } catch (err) {
       console.error("Failed to open browser", err);
@@ -57,7 +55,7 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
 
   const closeBrowser = useCallback(async () => {
     try {
-      await (window as any).electronAPI.closeBrowser();
+      await window.electronAPI?.closeBrowser();
       setIsBrowserOpen(false);
       setIsAutomationRunning(false);
       setCurrentNodeId(null);
@@ -74,7 +72,7 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
       );
       await new Promise((resolve) => setTimeout(resolve, 500));
       if (node.type === "automationStep" && node.data.step) {
-        return await (window as any).electronAPI.runStep(node.data.step);
+        return await window.electronAPI?.runStep(node.data.step);
       } else if (node.type === "conditional") {
         const conditionParams = {
           conditionType: node.data.conditionType,
@@ -88,9 +86,11 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
           parseAsNumber: node.data.parseAsNumber,
         };
 
-        const { conditionResult, effectiveSelector } = await (
-          window as any
-        ).electronAPI.runConditional(conditionParams);
+        type ConditionalResponse = { conditionResult?: boolean; effectiveSelector?: string | null };
+        const res = await window.electronAPI!.runConditional(conditionParams);
+        const response = res as ConditionalResponse;
+        const conditionResult = response.conditionResult;
+        const _effectiveSelector = response.effectiveSelector; // Keep as unused variable
 
         return {
           conditionResult,
@@ -114,12 +114,12 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
     try {
       // Collect automation-level variables from nodes or a top-level automation export
       // For now, look for a node with type 'automationVars' or fall back to none
-      const vars: Record<string, string> | undefined = (window as any).automation?.variables;
-      if ((window as any).electronAPI?.initVariables) {
-        await (window as any).electronAPI.initVariables(vars);
+      const vars: Record<string, string> | undefined = window.automation?.variables;
+      if (window.electronAPI?.initVariables) {
+        await window.electronAPI.initVariables(vars);
       }
-    } catch (e) {
-      console.debug("Failed to init executor variables:", e);
+    } catch (_e) {
+      // Initialization failed — keep as debug-level behavior without noisy logging
     }
 
     setIsAutomationRunning(true);
@@ -135,13 +135,14 @@ export default function useExecution({ nodes, edges, setNodes }: UseExecutionArg
         if (!node) return;
 
         const result = await executeNode(node);
+        const execResult = result as { conditionResult?: boolean } | undefined | null;
         setNodes((nds: ReactFlowNode[]) =>
           nds.map((n) => (n.id === node.id ? { ...n, data: { ...n.data, nodeRunning: false } } : n))
         );
         let nextNodes: string[] = [];
 
-        if (node.type === "conditional" && result?.conditionResult !== undefined) {
-          const branch = result.conditionResult ? "if" : "else";
+        if (node.type === "conditional" && execResult?.conditionResult !== undefined) {
+          const branch = execResult.conditionResult ? "if" : "else";
           nextNodes = edges
             .filter((e) => e.source === nodeId && e.sourceHandle === branch)
             .map((e) => e.target);

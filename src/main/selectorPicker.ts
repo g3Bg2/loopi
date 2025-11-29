@@ -51,7 +51,7 @@ export class SelectorPicker {
     browserWindow: BrowserWindow,
     timeout: number = 60000
   ): Promise<string | null> {
-    return new Promise<string | null>(async (resolve) => {
+    return new Promise<string | null>((resolve) => {
       const timeoutId = setTimeout(() => {
         cleanup();
         resolve(null);
@@ -63,7 +63,7 @@ export class SelectorPicker {
         ipcMain.removeListener("selector-cancel", onCancel);
       };
 
-      const onPick = (_event: any, selector: string) => {
+      const onPick = (_event: Electron.IpcMainEvent, selector: string) => {
         cleanup();
 
         // Handle select elements specially to capture option data
@@ -107,13 +107,12 @@ export class SelectorPicker {
       ipcMain.once("selector-picked", onPick);
       ipcMain.once("selector-cancel", onCancel);
 
-      try {
-        await this.injectPickerScript(browserWindow);
-      } catch (err) {
+      // injectPickerScript returns a promise; handle errors without using async executor
+      this.injectPickerScript(browserWindow).catch((err) => {
         console.error("Failed to inject picker script:", err);
         cleanup();
         resolve(null);
-      }
+      });
     });
   }
 

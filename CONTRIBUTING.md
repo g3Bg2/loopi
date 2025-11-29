@@ -33,3 +33,15 @@ Community
 - Expect constructive feedback and iterate on your PR
 
 Thank you for contributing — your work makes Automa better for everyone!
+
+## Developer Notes
+
+- **Tailwind / PostCSS**: The renderer UI uses Tailwind CSS processed via PostCSS. The canonical PostCSS config is `postcss.config.cjs` (CommonJS). There is also a small ESM re-export `postcss.config.js` present so tooling that expects ESM can still read the configuration. If you update Tailwind or PostCSS plugins, update `tailwind.config.cjs` `content` globs so utilities are generated.
+
+- **Formatting & Linting (Biome)**: We use Biome for formatting and linting. Run the formatter/linter before committing with:
+
+```bash
+pnpm format
+```
+
+Enable the Biome VS Code extension for on-save formatting where available.

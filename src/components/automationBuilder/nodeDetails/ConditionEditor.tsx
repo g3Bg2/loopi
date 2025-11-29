@@ -1,10 +1,4 @@
 import React from "react";
-import { Input } from "../../ui/input";
-import { Label } from "../../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
-import { Switch } from "../../ui/switch";
-import { SelectorButton } from "./customComponents";
-
 /**
  * ConditionEditor - Configuration UI for conditional nodes
  *
@@ -12,13 +6,24 @@ import { SelectorButton } from "./customComponents";
  * - elementExists: Check if element is present in DOM
  * - valueMatches: Compare element text content against expected value
  */
+import type { ReactFlowNode } from "../../../types";
+import { Input } from "../../ui/input";
+import { Label } from "../../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../ui/select";
+import { Switch } from "../../ui/switch";
+import { SelectorButton } from "./customComponents";
+
 export default function ConditionEditor({
   node,
   onUpdate,
   onPickWithSetter,
 }: {
-  node: any;
-  onUpdate: (id: string, type: "update", updates?: any) => void;
+  node: ReactFlowNode;
+  onUpdate: (
+    id: string,
+    type: "update",
+    updates?: import("./stepTypes/types").UpdatePayload
+  ) => void;
   onPickWithSetter: (setter: (s: string) => void) => Promise<void>;
 }) {
   const { data, id } = node;

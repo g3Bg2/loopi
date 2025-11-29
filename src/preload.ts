@@ -14,18 +14,19 @@
  * See: https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
  */
 import { contextBridge, ipcRenderer } from "electron";
+import type { AutomationStep } from "./types/steps";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   openBrowser: (url: string) => ipcRenderer.invoke("browser:open", url),
   closeBrowser: () => ipcRenderer.invoke("browser:close"),
   navigate: (url: string) => ipcRenderer.invoke("browser:navigate", url),
-  runStep: (step: any) => ipcRenderer.invoke("browser:runStep", step),
-  runConditional: (condition: any) => ipcRenderer.invoke("browser:runConditional", condition),
+  runStep: (step: AutomationStep) => ipcRenderer.invoke("browser:runStep", step),
+  runConditional: (condition: unknown) => ipcRenderer.invoke("browser:runConditional", condition),
   initVariables: (vars?: Record<string, string>) =>
     ipcRenderer.invoke("executor:initVariables", vars),
   getVariables: () => ipcRenderer.invoke("executor:getVariables"),
   onBrowserClosed: (callback: () => void) => ipcRenderer.on("browser:closed", callback),
   pickSelector: (url: string) => ipcRenderer.invoke("pick-selector", url),
-  sendSelector: (selector: any) => ipcRenderer.send("selector-picked", selector),
+  sendSelector: (selector: string) => ipcRenderer.send("selector-picked", selector),
   cancelSelector: () => ipcRenderer.send("selector-cancel"),
 });

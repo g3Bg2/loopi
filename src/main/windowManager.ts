@@ -58,8 +58,7 @@ export class WindowManager {
 
     await this.browserWindow.loadURL(url);
 
-    // Uncomment to debug picker script issues
-    // this.browserWindow.webContents.openDevTools();
+    // Developer note: devtools can be opened for debugging picker scripts
 
     // Store reference to avoid closure issues
     const onClosedCallback = onClosed;

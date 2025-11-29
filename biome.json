@@ -90,7 +90,12 @@
     "formatter": { "trailingCommas": "es5" },
     "globals": ["navigator", "window", "document"]
   },
-  "css": { "parser": null, "formatter": { "enabled": true }, "linter": null, "assist": null },
+  "css": {
+    "parser": { "tailwindDirectives": true },
+    "formatter": { "enabled": true },
+    "linter": null,
+    "assist": null
+  },
   "html": { "formatter": { "enabled": true } },
   "overrides": [
     {

@@ -200,6 +200,12 @@ How to use an example:
 4. Run the automation from the builder using the Run button. The executor will initialize variables and execute steps in the browser window.
 
 Tip: Use the `Condition` node's "Post-process Extracted Text" options for robust comparisons when dealing with currency or noisy text.
+
+## 🧰 Developer Notes
+
+- **Tailwind / PostCSS**: This project uses Tailwind CSS (v4) processed via PostCSS. The canonical PostCSS config is `postcss.config.cjs`; there is also an ESM re-export `postcss.config.js` to accommodate different toolchains. If you change Tailwind or PostCSS plugins, update both configs and ensure `tailwind.config.cjs` `content` globs include any new file locations so utilities are generated.
+
+- **Formatting & Linting (Biome)**: We use Biome for linting and formatting. Run `pnpm format` before committing to apply automatic fixes. The CI expects Biome checks to pass.
 ```
 
 ## 📝 Adding a New Step Type
