@@ -301,6 +301,12 @@ For advanced configuration and options, see the Biome [reference documentation](
 - Please follow the `CODE_OF_CONDUCT.md` to help keep this community welcoming.
 - Security issues should be reported privately as described in `SECURITY.md`.
 
+## 📧 Support
+
+For support, bug reports, or questions:
+- **Email**: support@dyan.live
+- **Issues**: [GitHub Issues](https://github.com/Dyan-Dev/automa/issues)
+
 ## 📄 License
 
 This project is licensed under the MIT License.

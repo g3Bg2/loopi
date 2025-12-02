@@ -34,6 +34,13 @@ Community
 
 Thank you for contributing — your work makes Automa better for everyone!
 
+## Getting Help
+
+If you need help or have questions about contributing:
+- **Email**: support@dyan.live
+- **GitHub Discussions**: Start a discussion in the repository
+- **Issues**: Search existing issues or create a new one
+
 ## Developer Notes
 
 - **Tailwind / PostCSS**: The renderer UI uses Tailwind CSS processed via PostCSS. The canonical PostCSS config is `postcss.config.cjs` (CommonJS). There is also a small ESM re-export `postcss.config.js` present so tooling that expects ESM can still read the configuration. If you update Tailwind or PostCSS plugins, update `tailwind.config.cjs` `content` globs so utilities are generated.
