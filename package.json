@@ -24,7 +24,8 @@
     "url": "https://github.com/Dyan-Dev/automa.git"
   },
   "bugs": {
-    "url": "https://github.com/Dyan-Dev/automa/issues"
+    "url": "https://github.com/Dyan-Dev/automa/issues",
+    "email": "support@dyan.live"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",
