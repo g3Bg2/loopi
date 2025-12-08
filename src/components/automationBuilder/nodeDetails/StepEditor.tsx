@@ -10,16 +10,25 @@ import { Label } from "../../ui/label";
 import {
   ApiCallStep,
   ClickStep,
+  CloudStorageStep,
+  DataTransformStep,
+  DatabaseQueryStep,
+  EnvironmentVariableStep,
   ExtractStep,
   ExtractWithLogicStep,
+  FileSystemStep,
   ModifyVariableStep,
   NavigateStep,
+  ReadEmailStep,
   ScreenshotStep,
   ScrollStep,
   SelectOptionStep,
+  SendEmailStep,
   SetVariableStep,
+  SystemCommandStep,
   TypeStep,
   WaitStep,
+  WebhookStep,
 } from "./stepTypes";
 
 export default function StepEditor({
@@ -91,6 +100,25 @@ export default function StepEditor({
         return <ModifyVariableStep step={step} id={id} onUpdate={onUpdate} />;
       case "setVariable":
         return <SetVariableStep step={step} id={id} onUpdate={onUpdate} />;
+      // Enterprise Edition Steps
+      case "fileSystem":
+        return <FileSystemStep step={step} id={id} onUpdate={onUpdate} />;
+      case "systemCommand":
+        return <SystemCommandStep step={step} id={id} onUpdate={onUpdate} />;
+      case "environmentVariable":
+        return <EnvironmentVariableStep step={step} id={id} onUpdate={onUpdate} />;
+      case "databaseQuery":
+        return <DatabaseQueryStep step={step} id={id} onUpdate={onUpdate} />;
+      case "sendEmail":
+        return <SendEmailStep step={step} id={id} onUpdate={onUpdate} />;
+      case "readEmail":
+        return <ReadEmailStep step={step} id={id} onUpdate={onUpdate} />;
+      case "cloudStorage":
+        return <CloudStorageStep step={step} id={id} onUpdate={onUpdate} />;
+      case "webhook":
+        return <WebhookStep step={step} id={id} onUpdate={onUpdate} />;
+      case "dataTransform":
+        return <DataTransformStep step={step} id={id} onUpdate={onUpdate} />;
       default:
         return null;
     }

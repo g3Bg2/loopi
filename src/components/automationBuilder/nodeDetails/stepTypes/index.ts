@@ -10,6 +10,16 @@ import { SelectOptionStep } from "./SelectOptionStep";
 import { SetVariableStep } from "./SetVariableStep";
 import { TypeStep } from "./TypeStep";
 import { WaitStep } from "./WaitStep";
+// Enterprise Edition Steps
+import { CloudStorageStep } from "./CloudStorageStep";
+import { DataTransformStep } from "./DataTransformStep";
+import { DatabaseQueryStep } from "./DatabaseQueryStep";
+import { EnvironmentVariableStep } from "./EnvironmentVariableStep";
+import { FileSystemStep } from "./FileSystemStep";
+import { ReadEmailStep } from "./ReadEmailStep";
+import { SendEmailStep } from "./SendEmailStep";
+import { SystemCommandStep } from "./SystemCommandStep";
+import { WebhookStep } from "./WebhookStep";
 
 export {
   ApiCallStep,
@@ -24,4 +34,14 @@ export {
   ScrollStep,
   ModifyVariableStep,
   SetVariableStep,
+  // Enterprise Edition
+  FileSystemStep,
+  SystemCommandStep,
+  EnvironmentVariableStep,
+  DatabaseQueryStep,
+  SendEmailStep,
+  ReadEmailStep,
+  CloudStorageStep,
+  WebhookStep,
+  DataTransformStep,
 };
