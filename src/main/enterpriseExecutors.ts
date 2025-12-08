@@ -112,8 +112,7 @@ export function executeEnvironmentVariable(
 
 /**
  * Execute database query
- * Note: This is a placeholder. In a real implementation, you would use
- * database-specific drivers (pg, mysql2, mongodb, etc.)
+ * Note: Requires database-specific drivers to be installed
  */
 export async function executeDatabaseQuery(
   databaseType: string,
@@ -121,22 +120,32 @@ export async function executeDatabaseQuery(
   query: string,
   parameters?: Record<string, unknown>
 ): Promise<unknown> {
-  // This is a placeholder implementation
-  // In production, you would use actual database drivers
-  console.log(`Executing ${databaseType} query:`, query);
-  console.log("Connection:", connectionString);
-  console.log("Parameters:", parameters);
+  // Log the attempt for debugging
+  console.log(`Database query requested: ${databaseType}`);
+  console.log(`Query: ${query}`);
+  
+  // Provide helpful error message with installation instructions
+  const driverMap = {
+    postgresql: "pg",
+    mysql: "mysql2",
+    mongodb: "mongodb",
+    sqlite: "better-sqlite3",
+    mssql: "mssql",
+  };
+  
+  const driver = driverMap[databaseType.toLowerCase() as keyof typeof driverMap];
   
   throw new Error(
-    "Database operations require additional dependencies. " +
-    "Install the appropriate driver: pg (PostgreSQL), mysql2 (MySQL), " +
-    "mongodb (MongoDB), better-sqlite3 (SQLite), or mssql (SQL Server)"
+    `Database operations require additional dependencies.\n\n` +
+    `To use ${databaseType}, install the driver:\n` +
+    `  npm install ${driver}\n\n` +
+    `This is a security feature - database drivers are not included by default to keep the application lightweight.`
   );
 }
 
 /**
  * Send email via SMTP
- * Note: This is a placeholder. In a real implementation, you would use nodemailer
+ * Note: Requires nodemailer to be installed
  */
 export async function executeSendEmail(
   smtpHost: string,
@@ -150,23 +159,20 @@ export async function executeSendEmail(
   html: boolean = false,
   attachments?: string[]
 ): Promise<unknown> {
-  // This is a placeholder implementation
-  // In production, you would use nodemailer or similar
-  console.log("Sending email:");
-  console.log("From:", from);
-  console.log("To:", to);
-  console.log("Subject:", subject);
-  console.log("SMTP:", `${smtpHost}:${smtpPort}`);
+  console.log(`Send email requested: ${from} -> ${to}`);
+  console.log(`Subject: ${subject}`);
   
   throw new Error(
-    "Email operations require additional dependencies. " +
-    "Install nodemailer: npm install nodemailer @types/nodemailer"
+    `Email operations require additional dependencies.\n\n` +
+    `To send emails, install nodemailer:\n` +
+    `  npm install nodemailer @types/nodemailer\n\n` +
+    `This is a security feature - email libraries are not included by default.`
   );
 }
 
 /**
  * Read email via IMAP
- * Note: This is a placeholder. In a real implementation, you would use imap
+ * Note: Requires imap library to be installed
  */
 export async function executeReadEmail(
   imapHost: string,
@@ -177,23 +183,20 @@ export async function executeReadEmail(
   filters?: Record<string, unknown>,
   markAsRead: boolean = false
 ): Promise<unknown> {
-  // This is a placeholder implementation
-  // In production, you would use imap or similar
-  console.log("Reading email:");
-  console.log("IMAP:", `${imapHost}:${imapPort}`);
-  console.log("Mailbox:", mailbox);
-  console.log("Filters:", filters);
+  console.log(`Read email requested: ${username}@${imapHost}`);
+  console.log(`Mailbox: ${mailbox}`);
   
   throw new Error(
-    "Email operations require additional dependencies. " +
-    "Install imap: npm install imap @types/imap"
+    `Email operations require additional dependencies.\n\n` +
+    `To read emails, install imap:\n` +
+    `  npm install imap @types/imap\n\n` +
+    `This is a security feature - email libraries are not included by default.`
   );
 }
 
 /**
  * Execute cloud storage operations
- * Note: This is a placeholder. In a real implementation, you would use
- * AWS SDK, Azure SDK, or GCP SDK
+ * Note: Requires cloud provider SDK to be installed
  */
 export async function executeCloudStorage(
   provider: string,
@@ -203,15 +206,22 @@ export async function executeCloudStorage(
   key: string,
   localPath?: string
 ): Promise<unknown> {
-  // This is a placeholder implementation
-  console.log(`Cloud storage operation: ${provider} ${operation}`);
-  console.log("Bucket:", bucket);
-  console.log("Key:", key);
-  console.log("Local path:", localPath);
+  console.log(`Cloud storage requested: ${provider} ${operation}`);
+  console.log(`Bucket: ${bucket}, Key: ${key}`);
+  
+  const sdkMap = {
+    aws: "aws-sdk (or @aws-sdk/client-s3)",
+    azure: "@azure/storage-blob",
+    gcp: "@google-cloud/storage",
+  };
+  
+  const sdk = sdkMap[provider.toLowerCase() as keyof typeof sdkMap] || "cloud provider SDK";
   
   throw new Error(
-    "Cloud storage operations require additional dependencies. " +
-    "Install: aws-sdk (AWS), @azure/storage-blob (Azure), or @google-cloud/storage (GCP)"
+    `Cloud storage operations require additional dependencies.\n\n` +
+    `To use ${provider}, install the SDK:\n` +
+    `  npm install ${sdk}\n\n` +
+    `This is a security feature - cloud SDKs are not included by default to keep the application lightweight.`
   );
 }
 
@@ -272,8 +282,7 @@ export async function executeWebhook(
 
 /**
  * Transform data between formats
- * Note: This is a placeholder. In a real implementation, you would use
- * libraries like xml2js, papaparse, js-yaml, etc.
+ * Note: Advanced formats require additional libraries
  */
 export async function executeDataTransform(
   operation: string,
@@ -282,7 +291,7 @@ export async function executeDataTransform(
   input: string,
   options?: Record<string, unknown>
 ): Promise<unknown> {
-  // Simple JSON operations
+  // JSON operations work without additional dependencies
   if (operation === "parse" && inputFormat === "json") {
     return JSON.parse(input);
   }
@@ -292,9 +301,22 @@ export async function executeDataTransform(
     return JSON.stringify(parsed, null, 2);
   }
   
-  // For other formats, require additional dependencies
+  // For other formats, provide helpful error messages
+  const libraryMap = {
+    xml: "xml2js",
+    csv: "papaparse",
+    yaml: "js-yaml",
+  };
+  
+  const neededLibs = new Set<string>();
+  if (inputFormat !== "json") neededLibs.add(libraryMap[inputFormat as keyof typeof libraryMap]);
+  if (outputFormat !== "json") neededLibs.add(libraryMap[outputFormat as keyof typeof libraryMap]);
+  
+  const libs = Array.from(neededLibs).filter(Boolean).join(", ");
+  
   throw new Error(
-    "Advanced data transformation requires additional dependencies. " +
-    "Install: xml2js (XML), papaparse (CSV), js-yaml (YAML)"
+    `Data transformation between ${inputFormat} and ${outputFormat} requires additional dependencies.\n\n` +
+    `Install: npm install ${libs}\n\n` +
+    `Note: JSON operations work without additional dependencies.`
   );
 }

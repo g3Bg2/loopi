@@ -23,11 +23,11 @@ const AddStepPopup: React.FC<AddStepPopupProps> = ({ onAdd }) => {
 
   // Group steps by category
   const groupedSteps = stepTypes.reduce((acc, step) => {
-    const category = (step as any).category || "other";
+    const category = step.category || "other";
     if (!acc[category]) acc[category] = [];
     acc[category].push(step);
     return acc;
-  }, {} as Record<string, typeof stepTypes>);
+  }, {} as Record<string, typeof stepTypes[number][]>);
 
   // Define category order and labels
   const categoryOrder = [
@@ -57,7 +57,7 @@ const AddStepPopup: React.FC<AddStepPopupProps> = ({ onAdd }) => {
                 {label}
               </div>
               {categorySteps.map((stepType) => {
-                const isEnterprise = (stepType as any).enterprise === true;
+                const isEnterprise = stepType.enterprise === true;
                 const isAvailable = !isEnterprise || edition === "enterprise";
 
                 const button = (

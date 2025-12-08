@@ -277,7 +277,16 @@ export type AutomationStep =
   | StepDataTransform;
 
 // UI meta for step type picker
-export const stepTypes = [
+export interface StepTypeMetadata {
+  value: string;
+  label: string;
+  icon: any;
+  description: string;
+  category: "browser" | "api" | "data" | "filesystem" | "system" | "database" | "email" | "cloud";
+  enterprise?: boolean;
+}
+
+export const stepTypes: readonly StepTypeMetadata[] = [
   // Browser Automation (Community)
   { value: "navigate", label: "Navigate", icon: Globe, description: "Go to a URL", category: "browser" },
   { value: "click", label: "Click", icon: Mouse, description: "Click an element", category: "browser" },
