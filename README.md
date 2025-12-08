@@ -203,7 +203,8 @@ Comprehensive documentation split into focused guides for different needs:
 - **[GETTING_STARTED.md](./docs/GETTING_STARTED.md)** - Installation and your first automation
 - **[VARIABLES.md](./docs/VARIABLES.md)** - Variable system, types, and access patterns (dot notation, arrays, nesting)
 - **[STEPS_REFERENCE.md](./docs/STEPS_REFERENCE.md)** - Complete step type reference with JSON examples
-- **[ENTERPRISE_FEATURES.md](./docs/ENTERPRISE_FEATURES.md)** - Enterprise Edition features and setup
+- **[ENTERPRISE_SETUP.md](./docs/ENTERPRISE_SETUP.md)** - Enterprise Edition activation and setup
+- **[ENTERPRISE_FEATURES.md](./docs/ENTERPRISE_FEATURES.md)** - Enterprise Edition features and examples
 - **[examples/](./docs/examples/)** - Real-world automation examples
 
 ### For Developers
@@ -220,14 +221,31 @@ Comprehensive documentation split into focused guides for different needs:
 
 ### Installation
 
+#### Community Edition
 ```bash
 git clone https://github.com/Dyan-Dev/loopi.git
 cd loopi
-pnpm install
-pnpm start
+npm install
+npm start
+```
+
+#### Enterprise Edition
+```bash
+git clone https://github.com/Dyan-Dev/loopi.git
+cd loopi
+npm install
+
+# Set environment variable for Enterprise Edition
+export LOOPI_EDITION=enterprise  # Linux/macOS
+# or
+set LOOPI_EDITION=enterprise     # Windows
+
+npm start
 ```
 
 For detailed setup instructions and your first automation, see [GETTING_STARTED.md](./docs/GETTING_STARTED.md).
+
+For Enterprise Edition setup and activation, see [ENTERPRISE_SETUP.md](./docs/ENTERPRISE_SETUP.md).
 
 ### Building
 
@@ -240,11 +258,16 @@ pnpm run publish        # Build and publish
 
 Example automation JSON files under `docs/examples/` demonstrate common patterns:
 
+**Community Examples:**
 - `contact_form_submission.json` - Form filling
 - `google_search.json` - Search and navigation
 - `ecommerce_price_monitor.json` - Multi-page scraping
 - `api_call_github_user.json` - API calls with object access
 - `api_call_newsletter_post.json` - POST requests
+
+**Enterprise Examples:**
+- `enterprise_data_pipeline.json` - Complete data pipeline (files, DB, API, email, cloud)
+- `enterprise_file_processing.json` - Log file processing and analysis
 
 **To use an example:**
 1. Open the builder and choose "Import"
