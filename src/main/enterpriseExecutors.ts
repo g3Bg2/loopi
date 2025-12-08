@@ -1,7 +1,7 @@
 import axios from "axios";
 import { exec } from "child_process";
-import fs from "fs/promises";
-import path from "path";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
@@ -26,13 +26,13 @@ export async function executeFileSystemStep(
   
   switch (operation) {
     case "read": {
-      const data = await fs.readFile(resolvedSource, encoding);
+      const data = await fs.readFile(resolvedSource, { encoding: encoding as BufferEncoding });
       return data;
     }
     
     case "write": {
       if (!content) throw new Error("Content is required for write operation");
-      await fs.writeFile(resolvedSource, content, encoding);
+      await fs.writeFile(resolvedSource, content, { encoding: encoding as BufferEncoding });
       return { success: true, path: resolvedSource };
     }
     

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { BrowserWindow } from "electron";
-import fs from "fs";
+import * as fs from "fs";
 import { AutomationStep } from "../types/steps";
 import { hasFeature } from "../types/edition";
 import * as EnterpriseExecutors from "./enterpriseExecutors";
