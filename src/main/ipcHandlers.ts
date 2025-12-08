@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import { AutomationExecutor } from "./automationExecutor";
 import { SelectorPicker } from "./selectorPicker";
 import { WindowManager } from "./windowManager";
+import { getEditionConfig } from "../types/edition";
 
 /**
  * Registers all IPC handlers for communication between renderer and main process
@@ -88,5 +89,12 @@ export function registerIPCHandlers(
     browserWindow.focus();
 
     return await picker.pickSelector(browserWindow);
+  });
+
+  /**
+   * Get the current edition configuration
+   */
+  ipcMain.handle("get-edition", async () => {
+    return getEditionConfig();
   });
 }

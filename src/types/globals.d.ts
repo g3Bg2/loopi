@@ -1,4 +1,5 @@
 import { AutomationStep } from "./steps";
+import { EditionConfig } from "./edition";
 
 export interface ElectronAPI {
   openBrowser: (url: string) => Promise<void>;
@@ -16,6 +17,7 @@ export interface ElectronAPI {
   sendSelector: (selector: string) => void;
   cancelSelector: () => void;
   focusMainWindow?: () => void;
+  getEdition: () => Promise<EditionConfig>;
 }
 
 declare global {

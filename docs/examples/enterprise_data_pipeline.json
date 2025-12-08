@@ -1,0 +1,201 @@
+{
+  "id": "ent-1",
+  "name": "Enterprise Data Pipeline",
+  "description": "Complete enterprise workflow demonstrating file operations, database queries, API calls, and email notifications",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "automation",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "step": {
+          "id": "1",
+          "type": "fileSystem",
+          "operation": "read",
+          "sourcePath": "/data/customers.csv",
+          "storeKey": "customersCSV",
+          "encoding": "utf-8",
+          "description": "Read customer data from CSV file"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "automation",
+      "position": { "x": 250, "y": 150 },
+      "data": {
+        "step": {
+          "id": "2",
+          "type": "dataTransform",
+          "operation": "convert",
+          "inputFormat": "csv",
+          "outputFormat": "json",
+          "input": "{{customersCSV}}",
+          "storeKey": "customers",
+          "description": "Convert CSV to JSON for processing"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "automation",
+      "position": { "x": 250, "y": 250 },
+      "data": {
+        "step": {
+          "id": "3",
+          "type": "databaseQuery",
+          "databaseType": "postgresql",
+          "connectionString": "postgresql://user:password@localhost:5432/crm",
+          "query": "SELECT customer_id, status, last_purchase FROM customer_status WHERE active = true",
+          "storeKey": "customerStatus",
+          "description": "Query customer status from database"
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "automation",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "step": {
+          "id": "4",
+          "type": "webhook",
+          "url": "https://api.analytics.com/process",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": "{\"customers\": {{customers}}, \"status\": {{customerStatus}}}",
+          "authentication": {
+            "type": "bearer",
+            "token": "your-api-token-here"
+          },
+          "retryPolicy": {
+            "maxRetries": 3,
+            "retryDelay": 2000
+          },
+          "storeKey": "analyticsResult",
+          "description": "Send data to analytics API with retry logic"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "type": "automation",
+      "position": { "x": 250, "y": 450 },
+      "data": {
+        "step": {
+          "id": "5",
+          "type": "fileSystem",
+          "operation": "write",
+          "sourcePath": "/reports/analytics-result.json",
+          "content": "{{analyticsResult}}",
+          "encoding": "utf-8",
+          "description": "Save analytics results to file"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "type": "automation",
+      "position": { "x": 250, "y": 550 },
+      "data": {
+        "step": {
+          "id": "6",
+          "type": "cloudStorage",
+          "provider": "aws",
+          "operation": "upload",
+          "credentials": {
+            "accessKey": "your-aws-access-key",
+            "secretKey": "your-aws-secret-key",
+            "region": "us-east-1"
+          },
+          "bucket": "company-reports",
+          "key": "analytics/daily-report.json",
+          "localPath": "/reports/analytics-result.json",
+          "description": "Upload report to AWS S3"
+        }
+      }
+    },
+    {
+      "id": "7",
+      "type": "automation",
+      "position": { "x": 250, "y": 650 },
+      "data": {
+        "step": {
+          "id": "7",
+          "type": "sendEmail",
+          "smtpHost": "smtp.gmail.com",
+          "smtpPort": 587,
+          "username": "automation@company.com",
+          "password": "your-email-password",
+          "from": "automation@company.com",
+          "to": "team@company.com",
+          "subject": "Daily Analytics Report Ready",
+          "body": "The daily analytics report has been generated and uploaded to S3.\n\nProcessed {{customers.length}} customers.\nReport available at: s3://company-reports/analytics/daily-report.json",
+          "html": false,
+          "description": "Send notification email to team"
+        }
+      }
+    },
+    {
+      "id": "8",
+      "type": "automation",
+      "position": { "x": 250, "y": 750 },
+      "data": {
+        "step": {
+          "id": "8",
+          "type": "systemCommand",
+          "command": "echo",
+          "args": ["Pipeline completed successfully"],
+          "storeKey": "completionMessage",
+          "description": "Log completion to system"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "1",
+      "target": "2",
+      "type": "default"
+    },
+    {
+      "id": "e2-3",
+      "source": "2",
+      "target": "3",
+      "type": "default"
+    },
+    {
+      "id": "e3-4",
+      "source": "3",
+      "target": "4",
+      "type": "default"
+    },
+    {
+      "id": "e4-5",
+      "source": "4",
+      "target": "5",
+      "type": "default"
+    },
+    {
+      "id": "e5-6",
+      "source": "5",
+      "target": "6",
+      "type": "default"
+    },
+    {
+      "id": "e6-7",
+      "source": "6",
+      "target": "7",
+      "type": "default"
+    },
+    {
+      "id": "e7-8",
+      "source": "7",
+      "target": "8",
+      "type": "default"
+    }
+  ]
+}

@@ -29,4 +29,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
   pickSelector: (url: string) => ipcRenderer.invoke("pick-selector", url),
   sendSelector: (selector: string) => ipcRenderer.send("selector-picked", selector),
   cancelSelector: () => ipcRenderer.send("selector-cancel"),
+  getEdition: () => ipcRenderer.invoke("get-edition"),
 });

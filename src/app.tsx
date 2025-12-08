@@ -1,10 +1,12 @@
 import { Bot, Grid } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as ReactDOM from "react-dom/client";
 import { AutomationBuilder } from "./components/AutomationBuilder";
 import { Dashboard } from "./components/Dashboard";
+import { EditionBadge } from "./components/EditionBadge";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Automation } from "./types";
+import type { Edition } from "./types/edition";
 import "./index.css";
 
 /**
@@ -20,6 +22,14 @@ export default function App() {
   const [currentView, setCurrentView] = useState<"dashboard" | "builder">("dashboard");
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
+  const [edition, setEdition] = useState<Edition>("community");
+
+  useEffect(() => {
+    // Get edition info from main process
+    window.electronAPI?.getEdition().then((config) => {
+      setEdition(config.edition);
+    });
+  }, []);
 
   const handleCreateAutomation = () => {
     setSelectedAutomation(null);
@@ -50,7 +60,8 @@ export default function App() {
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center space-x-2">
             <Bot className="h-8 w-8 text-primary" />
-            <h1 className="text-xl font-semibold">Automation Platform</h1>
+            <h1 className="text-xl font-semibold">Loopi Automation Platform</h1>
+            <EditionBadge edition={edition} />
           </div>
 
           <div className="flex items-center space-x-4">

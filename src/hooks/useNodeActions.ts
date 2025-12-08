@@ -303,6 +303,93 @@ export default function useNodeActions({
                           operation: "set" as const,
                           value: "",
                         };
+                      // Enterprise Edition Steps
+                      case "fileSystem":
+                        return {
+                          id: newId,
+                          type: "fileSystem" as const,
+                          description: `${label} step`,
+                          operation: "read" as const,
+                          sourcePath: "",
+                          encoding: "utf-8",
+                        };
+                      case "systemCommand":
+                        return {
+                          id: newId,
+                          type: "systemCommand" as const,
+                          description: `${label} step`,
+                          command: "",
+                        };
+                      case "environmentVariable":
+                        return {
+                          id: newId,
+                          type: "environmentVariable" as const,
+                          description: `${label} step`,
+                          operation: "get" as const,
+                          variableName: "",
+                        };
+                      case "databaseQuery":
+                        return {
+                          id: newId,
+                          type: "databaseQuery" as const,
+                          description: `${label} step`,
+                          databaseType: "postgresql" as const,
+                          connectionString: "",
+                          query: "",
+                        };
+                      case "sendEmail":
+                        return {
+                          id: newId,
+                          type: "sendEmail" as const,
+                          description: `${label} step`,
+                          smtpHost: "",
+                          smtpPort: 587,
+                          username: "",
+                          password: "",
+                          from: "",
+                          to: "",
+                          subject: "",
+                          body: "",
+                        };
+                      case "readEmail":
+                        return {
+                          id: newId,
+                          type: "readEmail" as const,
+                          description: `${label} step`,
+                          imapHost: "",
+                          imapPort: 993,
+                          username: "",
+                          password: "",
+                        };
+                      case "cloudStorage":
+                        return {
+                          id: newId,
+                          type: "cloudStorage" as const,
+                          description: `${label} step`,
+                          provider: "aws" as const,
+                          operation: "upload" as const,
+                          credentials: {},
+                          bucket: "",
+                          key: "",
+                        };
+                      case "webhook":
+                        return {
+                          id: newId,
+                          type: "webhook" as const,
+                          description: `${label} step`,
+                          url: "",
+                          method: "POST" as const,
+                        };
+                      case "dataTransform":
+                        return {
+                          id: newId,
+                          type: "dataTransform" as const,
+                          description: `${label} step`,
+                          operation: "parse" as const,
+                          inputFormat: "json" as const,
+                          outputFormat: "json" as const,
+                          input: "",
+                        };
                       default:
                         return {
                           id: newId,
