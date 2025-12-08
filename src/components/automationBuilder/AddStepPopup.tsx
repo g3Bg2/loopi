@@ -42,52 +42,52 @@ const AddStepPopup: React.FC<AddStepPopupProps> = ({ onAdd }) => {
   ];
 
   return (
-    <Card className="w-64 max-h-[600px] overflow-y-auto">
-      <CardHeader className="p-3">
-        <h3 className="text-sm font-medium">Add Next Step</h3>
-      </CardHeader>
-      <CardContent className="p-3 space-y-3">
-        {categoryOrder.map(({ key, label }) => {
-          const categorySteps = groupedSteps[key];
-          if (!categorySteps || categorySteps.length === 0) return null;
+    <TooltipProvider>
+      <Card className="w-64 max-h-[600px] overflow-y-auto">
+        <CardHeader className="p-3">
+          <h3 className="text-sm font-medium">Add Next Step</h3>
+        </CardHeader>
+        <CardContent className="p-3 space-y-3">
+          {categoryOrder.map(({ key, label }) => {
+            const categorySteps = groupedSteps[key];
+            if (!categorySteps || categorySteps.length === 0) return null;
 
-          return (
-            <div key={key} className="space-y-1">
-              <div className="text-xs font-semibold text-muted-foreground px-2 py-1">
-                {label}
-              </div>
-              {categorySteps.map((stepType) => {
-                const isEnterprise = stepType.enterprise === true;
-                const isAvailable = !isEnterprise || edition === "enterprise";
+            return (
+              <div key={key} className="space-y-1">
+                <div className="text-xs font-semibold text-muted-foreground px-2 py-1">
+                  {label}
+                </div>
+                {categorySteps.map((stepType) => {
+                  const isEnterprise = stepType.enterprise === true;
+                  const isAvailable = !isEnterprise || edition === "enterprise";
 
-                const button = (
-                  <Button
-                    key={stepType.value}
-                    variant="ghost"
-                    className="w-full text-left justify-start text-xs py-2 px-2 h-auto"
-                    onClick={() => {
-                      if (isAvailable) {
-                        onAdd(stepType.value as AutomationStep["type"]);
-                      }
-                    }}
-                    disabled={!isAvailable}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center">
-                        <stepType.icon className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">{stepType.label}</span>
+                  const button = (
+                    <Button
+                      key={stepType.value}
+                      variant="ghost"
+                      className="w-full text-left justify-start text-xs py-2 px-2 h-auto"
+                      onClick={() => {
+                        if (isAvailable) {
+                          onAdd(stepType.value as AutomationStep["type"]);
+                        }
+                      }}
+                      disabled={!isAvailable}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center">
+                          <stepType.icon className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="truncate">{stepType.label}</span>
+                        </div>
+                        {isEnterprise && edition === "enterprise" && (
+                          <EnterpriseFeatureBadge />
+                        )}
                       </div>
-                      {isEnterprise && edition === "enterprise" && (
-                        <EnterpriseFeatureBadge />
-                      )}
-                    </div>
-                  </Button>
-                );
+                    </Button>
+                  );
 
-                if (isEnterprise && edition === "community") {
-                  return (
-                    <TooltipProvider key={stepType.value}>
-                      <Tooltip>
+                  if (isEnterprise && edition === "community") {
+                    return (
+                      <Tooltip key={stepType.value}>
                         <TooltipTrigger asChild>{button}</TooltipTrigger>
                         <TooltipContent side="right">
                           <p className="text-xs">
@@ -95,30 +95,30 @@ const AddStepPopup: React.FC<AddStepPopupProps> = ({ onAdd }) => {
                           </p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
-                  );
-                }
+                    );
+                  }
 
-                return button;
-              })}
-            </div>
-          );
-        })}
+                  return button;
+                })}
+              </div>
+            );
+          })}
 
-        <div className="border-t pt-2 mt-2">
-          <Button
-            variant="ghost"
-            className="w-full text-left justify-start text-xs py-2 px-2"
-            onClick={() => {
-              onAdd("conditional");
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Conditional
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="border-t pt-2 mt-2">
+            <Button
+              variant="ghost"
+              className="w-full text-left justify-start text-xs py-2 px-2"
+              onClick={() => {
+                onAdd("conditional");
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Conditional
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 };
 

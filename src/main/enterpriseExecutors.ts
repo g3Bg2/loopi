@@ -258,6 +258,17 @@ export async function executeWebhook(
     }
   }
   
+  // Parse body data
+  let requestData: unknown = undefined;
+  if (body) {
+    try {
+      requestData = JSON.parse(body);
+    } catch (error) {
+      // If not valid JSON, send as string
+      requestData = body;
+    }
+  }
+  
   // Retry logic
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -266,7 +277,7 @@ export async function executeWebhook(
         method: method as any,
         url,
         headers: finalHeaders,
-        data: body ? JSON.parse(body) : undefined,
+        data: requestData,
       });
       return response.data;
     } catch (error) {
@@ -293,12 +304,20 @@ export async function executeDataTransform(
 ): Promise<unknown> {
   // JSON operations work without additional dependencies
   if (operation === "parse" && inputFormat === "json") {
-    return JSON.parse(input);
+    try {
+      return JSON.parse(input);
+    } catch (error) {
+      throw new Error(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   if (operation === "stringify" && outputFormat === "json") {
-    const parsed = typeof input === "string" ? JSON.parse(input) : input;
-    return JSON.stringify(parsed, null, 2);
+    try {
+      const parsed = typeof input === "string" ? JSON.parse(input) : input;
+      return JSON.stringify(parsed, null, 2);
+    } catch (error) {
+      throw new Error(`Failed to stringify to JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   // For other formats, provide helpful error messages

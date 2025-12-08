@@ -280,7 +280,7 @@ export type AutomationStep =
 export interface StepTypeMetadata {
   value: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
   category: "browser" | "api" | "data" | "filesystem" | "system" | "database" | "email" | "cloud";
   enterprise?: boolean;
