@@ -2,6 +2,8 @@ import axios from "axios";
 import { BrowserWindow } from "electron";
 import fs from "fs";
 import { AutomationStep } from "../types/steps";
+import { hasFeature } from "../types/edition";
+import * as EnterpriseExecutors from "./enterpriseExecutors";
 
 /**
  * Handles execution of automation steps in the browser window
@@ -360,6 +362,182 @@ export class AutomationExecutor {
           return res;
         }
         break;
+      }
+
+      // ============ Enterprise Edition Steps ============
+
+      case "fileSystem": {
+        if (!hasFeature("fileSystemAutomation")) {
+          throw new Error("File system automation is only available in Enterprise Edition");
+        }
+        const sourcePath = this.substituteVariables(step.sourcePath);
+        const destinationPath = step.destinationPath ? this.substituteVariables(step.destinationPath) : undefined;
+        const content = step.content ? this.substituteVariables(step.content) : undefined;
+        const result = await EnterpriseExecutors.executeFileSystemStep(
+          step.operation,
+          sourcePath,
+          destinationPath,
+          content,
+          step.encoding
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "systemCommand": {
+        if (!hasFeature("systemAutomation")) {
+          throw new Error("System automation is only available in Enterprise Edition");
+        }
+        const command = this.substituteVariables(step.command);
+        const args = step.args?.map(arg => this.substituteVariables(arg));
+        const workingDirectory = step.workingDirectory ? this.substituteVariables(step.workingDirectory) : undefined;
+        const result = await EnterpriseExecutors.executeSystemCommand(command, args, workingDirectory);
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result.stdout;
+        }
+        if (step.storeExitCode) {
+          this.variables[step.storeExitCode] = result.exitCode;
+        }
+        return result;
+      }
+
+      case "environmentVariable": {
+        if (!hasFeature("systemAutomation")) {
+          throw new Error("Environment variable access is only available in Enterprise Edition");
+        }
+        const variableName = this.substituteVariables(step.variableName);
+        const value = step.value ? this.substituteVariables(step.value) : undefined;
+        const result = EnterpriseExecutors.executeEnvironmentVariable(step.operation, variableName, value);
+        if (step.storeKey && step.operation === "get") {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "databaseQuery": {
+        if (!hasFeature("databaseAutomation")) {
+          throw new Error("Database automation is only available in Enterprise Edition");
+        }
+        const connectionString = this.substituteVariables(step.connectionString);
+        const query = this.substituteVariables(step.query);
+        const result = await EnterpriseExecutors.executeDatabaseQuery(
+          step.databaseType,
+          connectionString,
+          query,
+          step.parameters
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "sendEmail": {
+        if (!hasFeature("emailAutomation")) {
+          throw new Error("Email automation is only available in Enterprise Edition");
+        }
+        const to = this.substituteVariables(step.to);
+        const subject = this.substituteVariables(step.subject);
+        const body = this.substituteVariables(step.body);
+        const result = await EnterpriseExecutors.executeSendEmail(
+          step.smtpHost,
+          step.smtpPort,
+          step.username,
+          step.password,
+          step.from,
+          to,
+          subject,
+          body,
+          step.html,
+          step.attachments
+        );
+        return result;
+      }
+
+      case "readEmail": {
+        if (!hasFeature("emailAutomation")) {
+          throw new Error("Email automation is only available in Enterprise Edition");
+        }
+        const result = await EnterpriseExecutors.executeReadEmail(
+          step.imapHost,
+          step.imapPort,
+          step.username,
+          step.password,
+          step.mailbox,
+          step.filters,
+          step.markAsRead
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "cloudStorage": {
+        if (!hasFeature("cloudIntegration")) {
+          throw new Error("Cloud integration is only available in Enterprise Edition");
+        }
+        const bucket = this.substituteVariables(step.bucket);
+        const key = this.substituteVariables(step.key);
+        const localPath = step.localPath ? this.substituteVariables(step.localPath) : undefined;
+        const result = await EnterpriseExecutors.executeCloudStorage(
+          step.provider,
+          step.operation,
+          step.credentials,
+          bucket,
+          key,
+          localPath
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "webhook": {
+        if (!hasFeature("advancedApiWorkflows")) {
+          throw new Error("Advanced webhooks are only available in Enterprise Edition");
+        }
+        const url = this.substituteVariables(step.url);
+        const headers: Record<string, string> = {};
+        if (step.headers) {
+          for (const [k, v] of Object.entries(step.headers)) {
+            headers[k] = this.substituteVariables(v);
+          }
+        }
+        const body = step.body ? this.substituteVariables(step.body) : undefined;
+        const result = await EnterpriseExecutors.executeWebhook(
+          url,
+          step.method,
+          headers,
+          body,
+          step.authentication,
+          step.retryPolicy
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
+      }
+
+      case "dataTransform": {
+        if (!hasFeature("advancedApiWorkflows")) {
+          throw new Error("Data transformation is only available in Enterprise Edition");
+        }
+        const input = this.substituteVariables(step.input);
+        const result = await EnterpriseExecutors.executeDataTransform(
+          step.operation,
+          step.inputFormat,
+          step.outputFormat,
+          input,
+          step.options
+        );
+        if (step.storeKey) {
+          this.variables[step.storeKey] = result;
+        }
+        return result;
       }
     }
   }

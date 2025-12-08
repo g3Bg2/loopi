@@ -1,7 +1,7 @@
 {
   "name": "loopi",
   "version": "1.0.0",
-  "description": "A visual automation builder that lets you create, schedule, and run automations with secure credential management",
+  "description": "A visual automation platform for browser automation, file operations, system commands, databases, email, cloud services, and more. Build powerful workflows with a drag-and-drop interface.",
   "author": "Dyan-Dev",
   "main": ".webpack/main",
   "scripts": {

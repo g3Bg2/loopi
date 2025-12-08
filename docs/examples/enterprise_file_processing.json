@@ -1,0 +1,164 @@
+{
+  "id": "ent-2",
+  "name": "File Processing Workflow",
+  "description": "Enterprise workflow for processing log files, extracting data, and generating reports",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "automation",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "step": {
+          "id": "1",
+          "type": "fileSystem",
+          "operation": "read",
+          "sourcePath": "/var/log/application.log",
+          "storeKey": "logContent",
+          "encoding": "utf-8",
+          "description": "Read application log file"
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "automation",
+      "position": { "x": 250, "y": 150 },
+      "data": {
+        "step": {
+          "id": "2",
+          "type": "setVariable",
+          "variableName": "errorCount",
+          "value": "0",
+          "description": "Initialize error counter"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "automation",
+      "position": { "x": 250, "y": 250 },
+      "data": {
+        "step": {
+          "id": "3",
+          "type": "systemCommand",
+          "command": "grep",
+          "args": ["-c", "ERROR", "/var/log/application.log"],
+          "storeKey": "errorCount",
+          "description": "Count ERROR entries in log"
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "automation",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "step": {
+          "id": "4",
+          "type": "setVariable",
+          "variableName": "reportContent",
+          "value": "Log Analysis Report\n===================\n\nTotal Errors: {{errorCount}}\nLog File: /var/log/application.log\nGenerated: {{timestamp}}",
+          "description": "Generate report content"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "type": "automation",
+      "position": { "x": 250, "y": 450 },
+      "data": {
+        "step": {
+          "id": "5",
+          "type": "fileSystem",
+          "operation": "write",
+          "sourcePath": "/reports/log-analysis.txt",
+          "content": "{{reportContent}}",
+          "encoding": "utf-8",
+          "description": "Save report to file"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "type": "automation",
+      "position": { "x": 250, "y": 550 },
+      "data": {
+        "step": {
+          "id": "6",
+          "type": "fileSystem",
+          "operation": "copy",
+          "sourcePath": "/var/log/application.log",
+          "destinationPath": "/backup/application-{{timestamp}}.log",
+          "description": "Backup log file with timestamp"
+        }
+      }
+    },
+    {
+      "id": "7",
+      "type": "automation",
+      "position": { "x": 100, "y": 650 },
+      "data": {
+        "step": {
+          "id": "7",
+          "type": "sendEmail",
+          "smtpHost": "smtp.gmail.com",
+          "smtpPort": 587,
+          "username": "alerts@company.com",
+          "password": "email-password",
+          "from": "alerts@company.com",
+          "to": "devops@company.com",
+          "subject": "High Error Count Alert - {{errorCount}} errors",
+          "body": "{{reportContent}}\n\nPlease investigate the errors.",
+          "html": false,
+          "description": "Send alert email if errors found"
+        }
+      }
+    },
+    {
+      "id": "8",
+      "type": "automation",
+      "position": { "x": 400, "y": 650 },
+      "data": {
+        "step": {
+          "id": "8",
+          "type": "systemCommand",
+          "command": "echo",
+          "args": ["No errors found, all clear!"],
+          "description": "Log success message"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1-2",
+      "source": "1",
+      "target": "2",
+      "type": "default"
+    },
+    {
+      "id": "e2-3",
+      "source": "2",
+      "target": "3",
+      "type": "default"
+    },
+    {
+      "id": "e3-4",
+      "source": "3",
+      "target": "4",
+      "type": "default"
+    },
+    {
+      "id": "e4-5",
+      "source": "4",
+      "target": "5",
+      "type": "default"
+    },
+    {
+      "id": "e5-6",
+      "source": "5",
+      "target": "6",
+      "type": "default"
+    }
+  ]
+}
