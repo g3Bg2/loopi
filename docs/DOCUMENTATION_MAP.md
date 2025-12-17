@@ -18,9 +18,18 @@ Quick reference guide to all Loopi documentation files and how to use them.
 |-----------|---------|-----------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Understand system design and data flow | First time contributing |
 | [COMPONENT_GUIDE.md](./COMPONENT_GUIDE.md) | React component structure and patterns | When modifying UI |
-| [NEW_STEP_TEMPLATE.md](./NEW_STEP_TEMPLATE.md) | Step-by-step guide to add new step types | Adding features |
+| [NEW_STEP_TEMPLATE.md](./NEW_STEP_TEMPLATE.md) | Step-by-step guide to add new step types | Adding built-in features |
+| [CUSTOM_NODE_SDK.md](./CUSTOM_NODE_SDK.md) | Build custom nodes with TypeScript | Extending Loopi |
 | [DEVELOPMENT_WORKFLOWS.md](./DEVELOPMENT_WORKFLOWS.md) | Common tasks and troubleshooting | Day-to-day development |
 | [DOCUMENTATION_GUIDE.md](./DOCUMENTATION_GUIDE.md) | How to maintain documentation | Before committing |
+
+#### 🛠️ Community Contributors (Want to build custom nodes)
+| Document | Purpose | When to Use |
+|-----------|---------|-----------|
+| [CUSTOM_NODE_SDK.md](./CUSTOM_NODE_SDK.md) | Complete guide to building custom nodes | Getting started |
+| [../src/sdk/README.md](../src/sdk/README.md) | SDK API reference and quick start | During development |
+| [CUSTOM_NODE_SLACK_EXAMPLE.md](./examples/CUSTOM_NODE_SLACK_EXAMPLE.md) | Full working example | As reference |
+| [NODE_REGISTRY.json](./NODE_REGISTRY.json) | Browse available community nodes | Finding nodes |
 
 ---
 
@@ -60,6 +69,14 @@ Quick reference guide to all Loopi documentation files and how to use them.
 2. Reference: [ARCHITECTURE.md](./ARCHITECTURE.md) - System understanding
 3. Check: [COMPONENT_GUIDE.md](./COMPONENT_GUIDE.md) - Component patterns
 4. Update: [DOCUMENTATION_GUIDE.md](./DOCUMENTATION_GUIDE.md) - Update docs checklist
+
+**...build a custom node for Loopi**
+1. Read: [CUSTOM_NODE_SDK.md](./CUSTOM_NODE_SDK.md) - Complete guide
+2. Create: `loopi-node create my-node`
+3. Reference: [../src/sdk/README.md](../src/sdk/README.md) - API reference
+4. Example: [examples/CUSTOM_NODE_SLACK_EXAMPLE.md](./examples/CUSTOM_NODE_SLACK_EXAMPLE.md) - Working example
+5. Test: `loopi-node validate ./my-node`
+6. Share: Submit to [NODE_REGISTRY.json](./NODE_REGISTRY.json)
 
 **...fix a bug in step execution**
 1. Read: [ARCHITECTURE.md](./ARCHITECTURE.md) - Understand flow

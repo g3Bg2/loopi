@@ -198,6 +198,29 @@ Comprehensive documentation split into focused guides for different needs:
 - **[COMPONENT_GUIDE.md](./docs/COMPONENT_GUIDE.md)** - React components, hooks, and UI patterns
 - **[NEW_STEP_TEMPLATE.md](./docs/NEW_STEP_TEMPLATE.md)** - Complete checklist for adding new step types
 - **[DEVELOPMENT_WORKFLOWS.md](./docs/DEVELOPMENT_WORKFLOWS.md)** - Common dev tasks and troubleshooting
+
+### For Community Developers
+- **[CUSTOM_NODE_SDK.md](./docs/CUSTOM_NODE_SDK.md)** - Build custom nodes and integrate with 3rd party services
+- **[SDK Reference](./src/sdk/README.md)** - API reference and utilities
+- **[NODE_REGISTRY.json](./docs/NODE_REGISTRY.json)** - Discover community nodes
+- **[CUSTOM_NODE_SLACK_EXAMPLE.md](./docs/examples/CUSTOM_NODE_SLACK_EXAMPLE.md)** - Working example node
+
+## 🛠️ Community Node SDK
+
+Extend Loopi with custom nodes for any integration:
+
+```bash
+# Create a new custom node
+loopi-node create my-slack-integration
+
+# Validate your node
+loopi-node validate ./my-slack-integration
+
+# List installed nodes
+loopi-node list
+```
+
+**Learn more:** [CUSTOM_NODE_SDK.md](./docs/CUSTOM_NODE_SDK.md)
 - **[DOCUMENTATION_GUIDE.md](./docs/DOCUMENTATION_GUIDE.md)** - How to maintain and extend documentation
 
 ### Project Info

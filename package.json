@@ -4,7 +4,15 @@
   "description": "Loopi — Visual Browser Automation for humans and teams",
   "author": "Dyan-Dev",
   "main": ".webpack/main",
+  "exports": {
+    "./sdk": "./out/sdk/index.js"
+  },
+  "bin": {
+    "loopi-node": "./out/sdk/cli.js"
+  },
   "scripts": {
+    "build:sdk": "tsc -p tsconfig.sdk.json",
+    "dev:sdk": "tsc -p tsconfig.sdk.json -w",
     "start": "electron-forge start -- --no-sandbox",
     "package": "electron-forge package",
     "make": "electron-forge make",

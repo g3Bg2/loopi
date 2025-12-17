@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-15T00:00:00Z",
+  "description": "Loopi Community Node Registry - Verified and community-contributed custom nodes",
+  "nodes": [
+    {
+      "id": "slack-message",
+      "name": "Send Slack Message",
+      "description": "Send messages to Slack channels with variable interpolation",
+      "version": "1.0.0",
+      "author": "Loopi Team",
+      "tags": ["slack", "messaging", "integration"],
+      "repository": "https://github.com/Dyan-Dev/loopi-node-slack",
+      "verified": true,
+      "downloads": 0
+    },
+    {
+      "id": "github-create-issue",
+      "name": "Create GitHub Issue",
+      "description": "Automatically create GitHub issues from automation data",
+      "version": "1.0.0",
+      "author": "Community",
+      "tags": ["github", "issue-tracking", "integration"],
+      "repository": "https://github.com/community/loopi-node-github-issue",
+      "verified": false,
+      "downloads": 0
+    },
+    {
+      "id": "airtable-append",
+      "name": "Append to Airtable",
+      "description": "Add rows to Airtable bases automatically",
+      "version": "1.0.0",
+      "author": "Community",
+      "tags": ["airtable", "database", "integration"],
+      "repository": "https://github.com/community/loopi-node-airtable",
+      "verified": false,
+      "downloads": 0
+    },
+    {
+      "id": "gmail-send",
+      "name": "Send Gmail",
+      "description": "Send emails via Gmail API",
+      "version": "1.0.0",
+      "author": "Community",
+      "tags": ["gmail", "email", "integration"],
+      "repository": "https://github.com/community/loopi-node-gmail",
+      "verified": false,
+      "downloads": 0
+    },
+    {
+      "id": "notion-create-page",
+      "name": "Create Notion Page",
+      "description": "Create pages in Notion databases",
+      "version": "1.0.0",
+      "author": "Community",
+      "tags": ["notion", "database", "integration"],
+      "repository": "https://github.com/community/loopi-node-notion",
+      "verified": false,
+      "downloads": 0
+    }
+  ]
+}
