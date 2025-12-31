@@ -144,11 +144,11 @@ export class AutomationExecutor {
 
   /**
    * Executes a single automation step
-   * @param browserWindow - The browser window to execute the step in
+   * @param browserWindow - The browser window to execute the step in (optional for non-browser steps)
    * @param step - The step configuration object
    */
-  async executeStep(browserWindow: BrowserWindow, step: AutomationStep): Promise<unknown> {
-    const wc = browserWindow.webContents;
+  async executeStep(browserWindow: BrowserWindow | null, step: AutomationStep): Promise<unknown> {
+    const wc = browserWindow?.webContents;
     const startTime = performance.now();
 
     debugLogger.debug("Step Execution", `Starting ${step.type} step`, {
@@ -161,6 +161,7 @@ export class AutomationExecutor {
 
       switch (step.type) {
         case "navigate": {
+          if (!wc) throw new Error("Browser window required for navigate step");
           const url = this.substituteVariables(step.value);
           debugLogger.debug("Navigate", `Loading URL: ${url}`);
           await wc.loadURL(url);
@@ -169,6 +170,7 @@ export class AutomationExecutor {
         }
 
         case "click": {
+          if (!wc) throw new Error("Browser window required for click step");
           const clickSelector = this.substituteVariables(step.selector);
           debugLogger.debug("Click", `Clicking element with selector: ${clickSelector}`);
           await wc.executeJavaScript(`
@@ -187,6 +189,7 @@ export class AutomationExecutor {
         }
 
         case "type": {
+          if (!wc) throw new Error("Browser window required for type step");
           const typeSelector = this.substituteVariables(step.selector);
           const typeValue = this.substituteVariables(step.value);
           debugLogger.debug("Type", `Typing into selector: ${typeSelector}`, { value: typeValue });
@@ -221,6 +224,7 @@ export class AutomationExecutor {
         }
 
         case "screenshot": {
+          if (!wc) throw new Error("Browser window required for screenshot step");
           debugLogger.debug("Screenshot", "Capturing page screenshot");
           const img = await wc.capturePage();
           const timestamp = new Date().toISOString().replace(/[-:.]/g, "").slice(0, 15);
@@ -232,6 +236,7 @@ export class AutomationExecutor {
         }
 
         case "extract": {
+          if (!wc) throw new Error("Browser window required for extract step");
           const extractSelector = this.substituteVariables(step.selector);
           debugLogger.debug("Extract", `Extracting text from selector: ${extractSelector}`);
           const extracted = await wc.executeJavaScript(`
@@ -299,6 +304,7 @@ export class AutomationExecutor {
         }
 
         case "scroll": {
+          if (!wc) throw new Error("Browser window required for scroll step");
           if (step.scrollType === "toElement") {
             const scrollSelector = this.substituteVariables(step.selector || "");
             debugLogger.debug("Scroll", `Scrolling to element: ${scrollSelector}`);
@@ -322,6 +328,7 @@ export class AutomationExecutor {
         }
 
         case "selectOption": {
+          if (!wc) throw new Error("Browser window required for selectOption step");
           const selectSelector = this.substituteVariables(step.selector);
           const optionValue = this.substituteVariables(step.optionValue);
           debugLogger.debug("Select Option", `Selecting option in: ${selectSelector}`, {
@@ -346,6 +353,7 @@ export class AutomationExecutor {
         }
 
         case "fileUpload": {
+          if (!wc) throw new Error("Browser window required for fileUpload step");
           const fuSelector = this.substituteVariables(step.selector);
           const fuFilePath = this.substituteVariables(step.filePath);
           debugLogger.debug("File Upload", `Uploading file to: ${fuSelector}`, {
@@ -373,6 +381,7 @@ export class AutomationExecutor {
         }
 
         case "hover": {
+          if (!wc) throw new Error("Browser window required for hover step");
           const hoverSelector = this.substituteVariables(step.selector);
           debugLogger.debug("Hover", `Hovering over element: ${hoverSelector}`);
           await wc.executeJavaScript(`
@@ -937,13 +946,14 @@ export class AutomationExecutor {
   }
 
   /**
-   * Evaluates a conditional node (elementExists or valueMatches)
+   * Evaluates a browser conditional node (elementExists or valueMatches)
+   * These conditions require a browser window and interact with the DOM
    */
-  async evaluateConditional(
+  async evaluateBrowserConditional(
     browserWindow: BrowserWindow,
     config: {
-      conditionType: string;
-      selector: string;
+      browserConditionType?: string;
+      selector?: string;
       expectedValue?: string;
       nodeId?: string;
       condition?: string;
@@ -958,10 +968,13 @@ export class AutomationExecutor {
     effectiveSelector?: string | null;
   }> {
     const wc = browserWindow.webContents;
-    const { conditionType, selector, expectedValue } = config;
+    const { browserConditionType, selector, expectedValue } = config;
+    if (!browserConditionType || !selector) {
+      throw new Error("browserConditionType and selector are required");
+    }
     const startTime = performance.now();
 
-    debugLogger.debug("Conditional", `Evaluating ${conditionType} condition`, {
+    debugLogger.debug("BrowserConditional", `Evaluating ${browserConditionType} condition`, {
       selector,
       expectedValue,
     });
@@ -984,7 +997,7 @@ export class AutomationExecutor {
           const re = new RegExp(config.transformPattern, "g");
           s = s.replace(re, config.transformReplace ?? "");
         } catch (_e) {
-          debugLogger.warn("Conditional", "Invalid regex pattern", {
+          debugLogger.warn("BrowserConditional", "Invalid regex pattern", {
             pattern: config.transformPattern,
           });
         }
@@ -994,7 +1007,7 @@ export class AutomationExecutor {
 
     let conditionResult = false;
 
-    if (conditionType === "elementExists") {
+    if (browserConditionType === "elementExists") {
       conditionResult = await wc.executeJavaScript(`
         (() => {
           const sel = ${JSON.stringify(runtimeSelector)};
@@ -1006,10 +1019,14 @@ export class AutomationExecutor {
           return !!el;
         })();
       `);
-      debugLogger.debug("Conditional", `Element ${conditionResult ? "found" : "not found"}`, {
-        selector: runtimeSelector,
-      });
-    } else if (conditionType === "valueMatches") {
+      debugLogger.debug(
+        "BrowserConditional",
+        `Element ${conditionResult ? "found" : "not found"}`,
+        {
+          selector: runtimeSelector,
+        }
+      );
+    } else if (browserConditionType === "valueMatches") {
       const rawValue: string = await wc.executeJavaScript(`
         (() => {
           const sel = ${JSON.stringify(runtimeSelector)};
@@ -1025,7 +1042,7 @@ export class AutomationExecutor {
       const expected = this.substituteVariables(expectedValue || "");
       const op = config.condition || "equals";
 
-      debugLogger.debug("Conditional", "Value matching", {
+      debugLogger.debug("BrowserConditional", "Value matching", {
         rawValue,
         transformed,
         expected,
@@ -1046,7 +1063,7 @@ export class AutomationExecutor {
                 ? transformed.includes(expected)
                 : a === b);
         debugLogger.debug(
-          "Conditional",
+          "BrowserConditional",
           `Numeric comparison: ${a} ${op} ${b} = ${conditionResult}`
         );
       } else {
@@ -1062,9 +1079,110 @@ export class AutomationExecutor {
     }
 
     const duration = performance.now() - startTime;
-    debugLogger.logOperation("Conditional", `Condition evaluated to: ${conditionResult}`, duration);
+    debugLogger.logOperation(
+      "BrowserConditional",
+      `Condition evaluated to: ${conditionResult}`,
+      duration
+    );
 
     return { conditionResult, effectiveSelector: runtimeSelector };
+  }
+
+  /**
+   * Evaluates a variable conditional node (variable-based conditions)
+   * These conditions do not require a browser window and work with stored variables
+   */
+  evaluateVariableConditional(config: {
+    variableConditionType?: string;
+    variableName?: string;
+    expectedValue?: string;
+    parseAsNumber?: boolean;
+  }): {
+    conditionResult: boolean;
+  } {
+    const { variableConditionType, variableName, expectedValue } = config;
+    if (!variableConditionType || !variableName) {
+      throw new Error("variableConditionType and variableName are required");
+    }
+    const startTime = performance.now();
+
+    debugLogger.debug("VariableConditional", `Evaluating ${variableConditionType} condition`, {
+      variableName,
+      expectedValue,
+    });
+
+    const resolvedVarName = this.substituteVariables(variableName);
+    const variableValue = this.getVariableValue(resolvedVarName);
+    let conditionResult = false;
+
+    if (variableConditionType === "variableExists") {
+      conditionResult =
+        variableValue !== undefined && variableValue !== null && variableValue !== "";
+      debugLogger.debug(
+        "VariableConditional",
+        `Variable ${conditionResult ? "exists" : "does not exist"}`,
+        {
+          variableName: resolvedVarName,
+          value: variableValue,
+        }
+      );
+    } else {
+      const expected = this.substituteVariables(expectedValue || "");
+      const actualStr =
+        variableValue === null || variableValue === undefined ? "" : String(variableValue);
+
+      if (config.parseAsNumber) {
+        const a = parseFloat(actualStr);
+        const b = parseFloat(expected);
+
+        if (isNaN(a) || isNaN(b)) {
+          conditionResult = false;
+          debugLogger.warn("VariableConditional", "Cannot parse as number", {
+            variableValue: actualStr,
+            expectedValue: expected,
+          });
+        } else {
+          if (variableConditionType === "variableEquals") {
+            conditionResult = a === b;
+          } else if (variableConditionType === "variableGreaterThan") {
+            conditionResult = a > b;
+          } else if (variableConditionType === "variableLessThan") {
+            conditionResult = a < b;
+          } else if (variableConditionType === "variableContains") {
+            // Contains doesn't make sense for numbers, fall back to string
+            conditionResult = actualStr.includes(expected);
+          }
+          debugLogger.debug(
+            "VariableConditional",
+            `Numeric comparison: ${a} ${variableConditionType} ${b} = ${conditionResult}`
+          );
+        }
+      } else {
+        // String comparison
+        if (variableConditionType === "variableEquals") {
+          conditionResult = actualStr === expected;
+        } else if (variableConditionType === "variableContains") {
+          conditionResult = actualStr.includes(expected);
+        } else if (variableConditionType === "variableGreaterThan") {
+          conditionResult = actualStr > expected;
+        } else if (variableConditionType === "variableLessThan") {
+          conditionResult = actualStr < expected;
+        }
+        debugLogger.debug(
+          "VariableConditional",
+          `String comparison: "${actualStr}" ${variableConditionType} "${expected}" = ${conditionResult}`
+        );
+      }
+    }
+
+    const duration = performance.now() - startTime;
+    debugLogger.logOperation(
+      "VariableConditional",
+      `Condition evaluated to: ${conditionResult}`,
+      duration
+    );
+
+    return { conditionResult };
   }
 
   /**
