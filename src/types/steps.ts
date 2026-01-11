@@ -120,6 +120,23 @@ export interface StepAIOllama extends StepBase {
   storeKey?: string;
 }
 
+/** AI Agent - Uses tool calling to decide which nodes to execute */
+export interface StepAIAgent extends StepBase {
+  type: "aiAgent";
+  provider: "openai" | "anthropic" | "ollama"; // Only these support tool use
+  model: string;
+  goal: string; // What the agent should accomplish
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
+  credentialId?: string;
+  apiKey?: string;
+  baseUrl?: string;
+  timeoutMs?: number;
+  storeKey?: string; // Store final result/outcome
+  allowedSteps?: string[]; // Restrict which step types agent can call (empty = all)
+}
+
 export type ScrollType = "toElement" | "byAmount";
 export interface StepScroll extends StepBase {
   type: "scroll";
@@ -347,6 +364,7 @@ export type AutomationStep =
   | StepAIOpenAI
   | StepAIAnthropic
   | StepAIOllama
+  | StepAIAgent
   | StepScroll
   | StepSelectOption
   | StepFileUpload
@@ -478,6 +496,12 @@ export const aiSteps: StepTypeOption[] = [
     label: "AI: Ollama",
     icon: Sparkles,
     description: "Send prompt to local Ollama model",
+  },
+  {
+    value: "aiAgent",
+    label: "AI: Agent (Tool Calling)",
+    icon: Sparkles,
+    description: "AI chooses which nodes to execute to reach goal",
   },
 ];
 

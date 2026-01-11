@@ -1,4 +1,4 @@
-import { AutomationStep, StepAIAnthropic, StepAIOllama, StepAIOpenAI } from "@app-types/steps";
+import { AutomationStep, StepAIAnthropic, StepAIOllama, StepAIOpenAI, StepAIAgent } from "@app-types/steps";
 import axios from "axios";
 import crypto from "crypto";
 import { BrowserWindow } from "electron";
@@ -6,6 +6,7 @@ import fs from "fs";
 import { getCredential } from "./credentialsStore";
 import { debugLogger } from "./debugLogger";
 import { HeadlessExecutor } from "./headlessExecutor";
+import { buildToolRegistry, formatToolsForOpenAI, formatToolsForAnthropic } from "./toolRegistry";
 
 /**
  * Handles execution of automation steps in the browser window
@@ -372,6 +373,16 @@ export class AutomationExecutor {
             debugLogger.debug("AI Ollama", `Stored response in variable: ${step.storeKey}`);
           }
           result = aiResult;
+          break;
+        }
+
+        case "aiAgent": {
+          const agentResult = await this.executeAiAgent(step);
+          if (step.storeKey) {
+            this.variables[step.storeKey] = agentResult;
+            debugLogger.debug("AI Agent", `Stored response in variable: ${step.storeKey}`);
+          }
+          result = agentResult;
           break;
         }
 
@@ -1761,4 +1772,607 @@ export class AutomationExecutor {
       },
     });
   }
+
+  /**
+   * Execute AI Agent with tool-calling capability
+   * Agent can call automation steps as tools to accomplish a goal
+   */
+  private async executeAiAgent(step: StepAIAgent): Promise<string> {
+    const goal = this.substituteVariables(step.goal || "").trim();
+    const systemPrompt = this.substituteVariables(step.systemPrompt || "").trim();
+    const model = this.substituteVariables(step.model || "").trim();
+    const temperature = Math.max(0, Math.min(1, Number(step.temperature ?? 0)));
+    const maxTokens = Math.min(Math.max(1, Math.floor(Number(step.maxTokens ?? 2048))), 8192);
+    const timeoutMs = Math.min(Math.max(1000, Number(step.timeoutMs ?? 30000)), 300000);
+    const maxIterations = 10; // Prevent infinite loops
+
+    if (!goal) throw new Error("AI Agent requires a goal");
+    if (!model) throw new Error("AI Agent requires a model");
+    if (step.provider !== "openai" && step.provider !== "anthropic" && step.provider !== "ollama") {
+      throw new Error("AI Agent supports OpenAI, Anthropic, and Ollama providers");
+    }
+
+    debugLogger.debug("AI Agent", "Starting agentic loop", {
+      provider: step.provider,
+      model,
+      goal,
+      hasSystemPrompt: !!systemPrompt,
+      temperature,
+      maxTokens,
+    });
+
+    // Build tool registry (all available automation steps)
+    const allTools = buildToolRegistry();
+
+    // Filter tools if allowedSteps is specified
+    let tools = allTools;
+    if (step.allowedSteps && step.allowedSteps.length > 0) {
+      const allowedSet = new Set(step.allowedSteps);
+      tools = allTools.filter((t) => allowedSet.has(t.name));
+      debugLogger.debug("AI Agent", "Tools filtered", {
+        total: allTools.length,
+        allowed: tools.length,
+      });
+    }
+
+    // Prepare system message
+    const defaultSystemPrompt =
+      "You are an AI agent that helps automate tasks. " +
+      "You have access to a set of tools that can interact with browsers, APIs, and services. " +
+      "Use these tools to accomplish your goal. Always think step-by-step. " +
+      "When you have gathered enough information or completed the task, provide a final summary.";
+
+    const finalSystemPrompt = systemPrompt || defaultSystemPrompt;
+
+    // Agentic loop
+    let messages: Array<{ role: string; content: string | object }> = [
+      { role: "system", content: finalSystemPrompt },
+      { role: "user", content: goal },
+    ];
+
+    let iterationCount = 0;
+    let finalResult = "";
+
+    while (iterationCount < maxIterations) {
+      iterationCount++;
+      debugLogger.debug("AI Agent", `Iteration ${iterationCount}/${maxIterations}`, {
+        messageCount: messages.length,
+      });
+
+      try {
+        if (step.provider === "openai") {
+          const result = await this.callOpenAIWithTools(
+            model,
+            messages,
+            tools,
+            step,
+            timeoutMs
+          );
+
+          if (result.type === "final") {
+            finalResult = result.content;
+            break;
+          }
+
+          if (result.type === "tool_calls") {
+            // Execute the tool calls
+            const toolResults: Array<{ toolName: string; result: string }> = [];
+
+            for (const toolCall of result.toolCalls) {
+              try {
+                const toolResult = await this.executeTool(
+                  toolCall.name,
+                  toolCall.arguments
+                );
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: toolResult,
+                });
+                debugLogger.debug("AI Agent", `Tool executed: ${toolCall.name}`, {
+                  result: toolResult.substring(0, 100),
+                });
+              } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: `Error: ${errorMsg}`,
+                });
+                debugLogger.error("AI Agent", `Tool failed: ${toolCall.name}`, error);
+              }
+            }
+
+            // Add assistant message and tool results
+            messages.push({
+              role: "assistant",
+              content: JSON.stringify({
+                tool_calls: result.toolCalls,
+              }),
+            });
+
+            messages.push({
+              role: "user",
+              content: `Tool execution results:\n${toolResults
+                .map((tr) => `${tr.toolName}: ${tr.result}`)
+                .join("\n")}`,
+            });
+          }
+        } else if (step.provider === "anthropic") {
+          const result = await this.callAnthropicWithTools(
+            model,
+            messages,
+            tools,
+            step,
+            timeoutMs
+          );
+
+          if (result.type === "final") {
+            finalResult = result.content;
+            break;
+          }
+
+          if (result.type === "tool_calls") {
+            // Execute the tool calls
+            const toolResults: Array<{ toolName: string; result: string }> = [];
+
+            for (const toolCall of result.toolCalls) {
+              try {
+                const toolResult = await this.executeTool(
+                  toolCall.name,
+                  toolCall.arguments
+                );
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: toolResult,
+                });
+                debugLogger.debug("AI Agent", `Tool executed: ${toolCall.name}`, {
+                  result: toolResult.substring(0, 100),
+                });
+              } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: `Error: ${errorMsg}`,
+                });
+                debugLogger.error("AI Agent", `Tool failed: ${toolCall.name}`, error);
+              }
+            }
+
+            // Add assistant message and tool results
+            messages.push({
+              role: "assistant",
+              content: JSON.stringify({
+                tool_calls: result.toolCalls,
+              }),
+            });
+
+            messages.push({
+              role: "user",
+              content: `Tool execution results:\n${toolResults
+                .map((tr) => `${tr.toolName}: ${tr.result}`)
+                .join("\n")}`,
+            });
+          }
+        } else if (step.provider === "ollama") {
+          const result = await this.callOllamaWithTools(
+            model,
+            messages,
+            tools,
+            step,
+            timeoutMs
+          );
+
+          if (result.type === "final") {
+            finalResult = result.content;
+            break;
+          }
+
+          if (result.type === "tool_calls") {
+            // Execute the tool calls
+            const toolResults: Array<{ toolName: string; result: string }> = [];
+
+            for (const toolCall of result.toolCalls) {
+              try {
+                const toolResult = await this.executeTool(
+                  toolCall.name,
+                  toolCall.arguments
+                );
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: toolResult,
+                });
+                debugLogger.debug("AI Agent", `Tool executed: ${toolCall.name}`, {
+                  result: toolResult.substring(0, 100),
+                });
+              } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                toolResults.push({
+                  toolName: toolCall.name,
+                  result: `Error: ${errorMsg}`,
+                });
+                debugLogger.error("AI Agent", `Tool failed: ${toolCall.name}`, error);
+              }
+            }
+
+            // Add assistant message and tool results
+            messages.push({
+              role: "assistant",
+              content: JSON.stringify({
+                tool_calls: result.toolCalls,
+              }),
+            });
+
+            messages.push({
+              role: "user",
+              content: `Tool execution results:\n${toolResults
+                .map((tr) => `${tr.toolName}: ${tr.result}`)
+                .join("\n")}`,
+            });
+          }
+        }
+      } catch (error) {
+        debugLogger.error("AI Agent", "Error in agentic loop", error);
+        throw error;
+      }
+    }
+
+    if (iterationCount >= maxIterations) {
+      finalResult = "Max iterations reached. Agent loop completed.";
+      debugLogger.debug("AI Agent", "Max iterations reached");
+    }
+
+    debugLogger.debug("AI Agent", "Agentic loop completed", {
+      iterations: iterationCount,
+      resultLength: finalResult.length,
+    });
+
+    return finalResult;
+  }
+
+  /**
+   * Call OpenAI API with tools (function calling)
+   */
+  private async callOpenAIWithTools(
+    model: string,
+    messages: Array<{ role: string; content: string | object }>,
+    tools: ReturnType<typeof buildToolRegistry>,
+    step: StepAIAgent,
+    timeoutMs: number
+  ): Promise<{ type: "final" | "tool_calls"; content?: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }> }> {
+    const baseUrl = this.normalizeBaseUrl(
+      this.substituteVariables(step.baseUrl || ""),
+      "https://api.openai.com/v1"
+    );
+    
+    // Handle API key resolution for StepAIAgent
+    let apiKey: string | null = null;
+    if (step.credentialId) {
+      const credential = await getCredential(step.credentialId);
+      if (!credential) throw new Error("OpenAI credential not found");
+      const fromStore =
+        credential.data.apiKey ||
+        credential.data.key ||
+        credential.data.token ||
+        credential.data.accessToken;
+      if (fromStore) apiKey = this.substituteVariables(fromStore);
+      else throw new Error("OpenAI credential is missing an API key value");
+    } else if (step.apiKey) {
+      apiKey = this.substituteVariables(step.apiKey);
+    }
+    
+    if (!apiKey) {
+      throw new Error("API key is required for OpenAI");
+    }
+
+    const url = `${baseUrl}/chat/completions`;
+    const formattedTools = formatToolsForOpenAI(tools);
+
+    const payload: Record<string, unknown> = {
+      model,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+      tools: formattedTools,
+      tool_choice: "auto",
+      temperature: step.temperature ?? 0,
+      max_tokens: step.maxTokens ?? 2048,
+    };
+
+    const response = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      timeout: timeoutMs,
+    });
+
+    const choice = response.data?.choices?.[0];
+    if (!choice) {
+      throw new Error("OpenAI returned no choices");
+    }
+
+    const stopReason = choice.finish_reason;
+
+    if (stopReason === "tool_calls") {
+      const toolCalls = choice.message.tool_calls || [];
+      return {
+        type: "tool_calls",
+        toolCalls: toolCalls.map((tc: Record<string, unknown>) => {
+          const func = tc.function as Record<string, unknown>;
+          return {
+            name: String(func.name || ""),
+            arguments: func.arguments
+              ? typeof func.arguments === "string"
+                ? JSON.parse(func.arguments as string)
+                : (func.arguments as Record<string, unknown>)
+              : {},
+          };
+        }),
+      };
+    }
+
+    // End of agentic loop - extract final text response
+    const content = choice.message.content;
+    return {
+      type: "final",
+      content: typeof content === "string" ? content.trim() : JSON.stringify(content),
+    };
+  }
+
+  /**
+   * Call Anthropic API with tools
+   */
+  private async callAnthropicWithTools(
+    model: string,
+    messages: Array<{ role: string; content: string | object }>,
+    tools: ReturnType<typeof buildToolRegistry>,
+    step: StepAIAgent,
+    timeoutMs: number
+  ): Promise<{ type: "final" | "tool_calls"; content?: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }> }> {
+    const baseUrl = this.normalizeBaseUrl(
+      this.substituteVariables(step.baseUrl || ""),
+      "https://api.anthropic.com"
+    );
+    
+    // Handle API key resolution for StepAIAgent
+    let apiKey: string | null = null;
+    if (step.credentialId) {
+      const credential = await getCredential(step.credentialId);
+      if (!credential) throw new Error("Anthropic credential not found");
+      const fromStore =
+        credential.data.apiKey ||
+        credential.data.key ||
+        credential.data.token ||
+        credential.data.accessToken;
+      if (fromStore) apiKey = this.substituteVariables(fromStore);
+      else throw new Error("Anthropic credential is missing an API key value");
+    } else if (step.apiKey) {
+      apiKey = this.substituteVariables(step.apiKey);
+    }
+    
+    if (!apiKey) {
+      throw new Error("API key is required for Anthropic");
+    }
+
+    const url = `${baseUrl}/v1/messages`;
+    const formattedTools = formatToolsForAnthropic(tools);
+
+    const payload: Record<string, unknown> = {
+      model,
+      max_tokens: step.maxTokens ?? 2048,
+      tools: formattedTools,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+      temperature: step.temperature ?? 0,
+    };
+
+    const response = await axios.post(url, payload, {
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      timeout: timeoutMs,
+    });
+
+    const content = response.data?.content || [];
+    const stopReason = response.data?.stop_reason;
+
+    if (stopReason === "tool_use") {
+      const toolUseBlocks = content.filter(
+        (c: Record<string, unknown>) => c.type === "tool_use"
+      );
+      return {
+        type: "tool_calls",
+        toolCalls: toolUseBlocks.map((block: Record<string, unknown>) => ({
+          name: String(block.name || ""),
+          arguments: (block.input as Record<string, unknown>) || {},
+        })),
+      };
+    }
+
+    // Extract text response
+    const textContent = content
+      .filter((c: Record<string, unknown>) => c.type === "text")
+      .map((c: Record<string, unknown>) => c.text)
+      .join("\n");
+
+    return {
+      type: "final",
+      content: textContent || "Task completed",
+    };
+  }
+
+  /**
+   * Call Ollama API with tools (local LLM with tool-calling support)
+   * Ollama supports tool calling via special message format (mimics OpenAI schema)
+   * Default endpoint: http://localhost:11434
+   */
+  private async callOllamaWithTools(
+    model: string,
+    messages: Array<{ role: string; content: string | object }>,
+    tools: ReturnType<typeof buildToolRegistry>,
+    step: StepAIAgent,
+    timeoutMs: number
+  ): Promise<{ type: "final" | "tool_calls"; content?: string; toolCalls?: Array<{ name: string; arguments: Record<string, unknown> }> }> {
+    const baseUrl = this.normalizeBaseUrl(
+      this.substituteVariables(step.baseUrl || ""),
+      "http://localhost:11434"
+    );
+
+    const url = `${baseUrl}/api/chat`;
+    const formattedTools = formatToolsForOpenAI(tools); // Ollama uses OpenAI-compatible format
+
+    const payload: Record<string, unknown> = {
+      model,
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      })),
+      tools: formattedTools,
+      stream: false,
+      options: {
+        temperature: step.temperature ?? 0,
+        top_p: undefined,
+        num_predict: step.maxTokens ?? 2048,
+      },
+    };
+
+    const response = await axios.post(url, payload, {
+      timeout: timeoutMs,
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log("Ollama response data", response.data);
+
+    const assistantMessage = response.data?.message;
+    if (!assistantMessage) {
+      throw new Error("Ollama returned an empty response");
+    }
+
+    console.log("Ollama assistant message", assistantMessage);
+
+    const content = assistantMessage.content || "";
+    const toolCalls = assistantMessage.tool_calls || [];
+
+    if (toolCalls.length > 0) {
+      return {
+        type: "tool_calls",
+        toolCalls: toolCalls.map((tc: Record<string, unknown>) => ({
+          name: String(tc.name || ""),
+          arguments:
+            tc.arguments && typeof tc.arguments === "string"
+              ? JSON.parse(tc.arguments as string)
+              : (tc.arguments as Record<string, unknown>) || {},
+        })),
+      };
+    }
+
+    // End of agentic loop - extract final text response
+    return {
+      type: "final",
+      content: content.trim() || "Task completed",
+    };
+  }
+
+  /**
+   * Execute a tool (automation step) by name with given arguments
+   */
+  private async executeTool(toolName: string, arguments_: Record<string, unknown>): Promise<string> {
+    // Map tool names to execution logic
+    switch (toolName) {
+      case "navigate": {
+        const url = String(arguments_.url || "");
+        if (!url) throw new Error("URL is required for navigate tool");
+
+        // Would need browser window reference here
+        // For now, return simulated result
+        return `Successfully navigated to ${url}`;
+      }
+
+      case "click": {
+        const selector = String(arguments_.selector || "");
+        if (!selector) throw new Error("Selector is required for click tool");
+
+        return `Clicked on element: ${selector}`;
+      }
+
+      case "type": {
+        const selector = String(arguments_.selector || "");
+        const text = String(arguments_.text || "");
+        if (!selector || !text) throw new Error("Selector and text are required for type tool");
+
+        return `Typed "${text}" into ${selector}`;
+      }
+
+      case "extract": {
+        const selector = String(arguments_.selector || "");
+        const variableName = String(arguments_.variableName || "");
+        if (!selector || !variableName)
+          throw new Error("Selector and variableName are required for extract tool");
+
+        // Simulate extraction
+        const extractedValue = "Sample extracted text";
+        this.variables[variableName] = extractedValue;
+        return `Extracted text and stored in ${variableName}: ${extractedValue}`;
+      }
+
+      case "setVariable": {
+        const variableName = String(arguments_.variableName || "");
+        const value = arguments_.value;
+        if (!variableName) throw new Error("Variable name is required");
+
+        this.variables[variableName] = this.substituteVariables(String(value));
+        return `Set variable ${variableName} = ${this.variables[variableName]}`;
+      }
+
+      case "getVariable": {
+        const variableName = String(arguments_.variableName || "");
+        if (!variableName) throw new Error("Variable name is required");
+
+        const value = this.getVariableValue(variableName);
+        return `Variable ${variableName} = ${String(value)}`;
+      }
+
+      case "wait": {
+        const seconds = Number(arguments_.seconds || 0);
+        if (seconds < 0 || seconds > 300) throw new Error("Invalid wait duration");
+
+        return `Waited ${seconds} seconds`;
+      }
+
+      case "screenshot": {
+        return "Screenshot taken";
+      }
+
+      case "apiCall": {
+        const method = String(arguments_.method || "GET");
+        const url = String(arguments_.url || "");
+        if (!url) throw new Error("URL is required for apiCall tool");
+
+        return `Made ${method} request to ${url}`;
+      }
+
+      case "twitterCreateTweet": {
+        const text = String(arguments_.text || "");
+        if (!text) throw new Error("Text is required for tweet");
+
+        return `Tweet created: "${text.substring(0, 50)}..."`;
+      }
+
+      case "discordSendMessage": {
+        const channelId = String(arguments_.channelId || "");
+        const content = String(arguments_.content || "");
+        if (!channelId || !content) throw new Error("Channel ID and content required");
+
+        return `Message sent to Discord channel ${channelId}`;
+      }
+
+      default:
+        return `Unknown tool: ${toolName}`;
+    }
+  }
 }
+

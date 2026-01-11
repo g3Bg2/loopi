@@ -15,6 +15,7 @@ import { DiscordSendWebhookStep } from "./discord/DiscordSendWebhookStep";
 import { AiAnthropicStep } from "./integration/AiAnthropicStep";
 import { AiOllamaStep } from "./integration/AiOllamaStep";
 import { AiOpenAIStep } from "./integration/AiOpenAIStep";
+import { AiAgentStep } from "./integration/AiAgentStep";
 import { ApiCallStep } from "./integration/ApiCallStep";
 import { TwitterCreateTweetStep } from "./twitter/TwitterCreateTweetStep";
 import { TwitterDeleteTweetStep } from "./twitter/TwitterDeleteTweetStep";
@@ -31,6 +32,7 @@ export {
   AiOpenAIStep,
   AiAnthropicStep,
   AiOllamaStep,
+  AiAgentStep,
   NavigateStep,
   ClickStep,
   TypeStep,

@@ -154,6 +154,21 @@ export function createNode({
         storeKey: "aiResponse",
       } as AutomationStep;
       break;
+    case "aiAgent":
+      step = {
+        id: newId,
+        type: "aiAgent",
+        description: `${label} step`,
+        provider: "openai",
+        model: "gpt-4-turbo",
+        goal: "Accomplish the following task:",
+        systemPrompt: "You are an AI agent that can control browser automation. Use the available tools to accomplish the goal.",
+        temperature: 0,
+        maxTokens: 2048,
+        storeKey: "agentResult",
+        allowedSteps: [],
+      } as AutomationStep;
+      break;
     case "discordSendMessage":
       step = {
         id: newId,

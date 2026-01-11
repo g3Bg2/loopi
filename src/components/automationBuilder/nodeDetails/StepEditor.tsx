@@ -11,6 +11,7 @@ import {
   AiAnthropicStep,
   AiOllamaStep,
   AiOpenAIStep,
+  AiAgentStep,
   ApiCallStep,
   ClickStep,
   DiscordDeleteMessageStep,
@@ -102,6 +103,8 @@ export default function StepEditor({
         return <AiAnthropicStep step={step} id={id} onUpdate={onUpdate} />;
       case "aiOllama":
         return <AiOllamaStep step={step} id={id} onUpdate={onUpdate} />;
+      case "aiAgent":
+        return <AiAgentStep step={step} id={id} onUpdate={onUpdate} />;
       case "discordSendMessage":
         return <DiscordSendMessageStep step={step} id={id} onUpdate={onUpdate} />;
       case "discordSendWebhook":
