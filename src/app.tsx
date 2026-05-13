@@ -42,6 +42,14 @@ export default function App() {
           } else {
             root.classList.toggle("dark", settings.theme === "dark");
           }
+
+          const fontSizePx: Record<string, string> = {
+            small: "14px",
+            default: "16px",
+            large: "17.5px",
+            xlarge: "19px",
+          };
+          root.style.fontSize = fontSizePx[settings.fontSize ?? "default"] ?? "16px";
         }
       } catch (error) {
         console.error("Failed to load theme:", error);
@@ -118,7 +126,10 @@ export default function App() {
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-2.5">
             <div className="relative">
-              <div className="absolute inset-0 rounded-lg bg-primary/20 blur-md -z-10" aria-hidden />
+              <div
+                className="absolute inset-0 rounded-lg bg-primary/20 blur-md -z-10"
+                aria-hidden
+              />
               <img src={loopLogo} alt="Loopi" className="h-8 w-8 relative" />
             </div>
             <h1 className="font-serif text-xl tracking-tight">

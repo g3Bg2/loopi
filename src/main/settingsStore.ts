@@ -18,12 +18,14 @@ function getDefaultSettings(): AppSettings {
     const { app } = require("electron");
     return {
       theme: "light",
+      fontSize: "default",
       enableNotifications: true,
       downloadPath: app.getPath("downloads"),
     };
   } catch {
     return {
       theme: "light",
+      fontSize: "default",
       enableNotifications: true,
     };
   }

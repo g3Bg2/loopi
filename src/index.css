@@ -6,8 +6,8 @@
   --font-size: 14.5px;
 
   /* Warm editorial palette — matches loopi.site */
-  --background: #faf8f3;           /* parchment */
-  --foreground: #1a1510;           /* warm ink */
+  --background: #faf8f3; /* parchment */
+  --foreground: #1a1510; /* warm ink */
   --card: #ffffff;
   --card-foreground: #1a1510;
   --popover: #ffffff;
@@ -39,11 +39,11 @@
 
   --ring: rgba(193, 95, 54, 0.5);
 
-  --chart-1: #c15f36;   /* primary */
-  --chart-2: #9f6436;   /* secondary */
-  --chart-3: #c59818;   /* accent */
-  --chart-4: #d5814f;   /* primary-400 */
-  --chart-5: #b88158;   /* secondary-400 */
+  --chart-1: #c15f36; /* primary */
+  --chart-2: #9f6436; /* secondary */
+  --chart-3: #c59818; /* accent */
+  --chart-4: #d5814f; /* primary-400 */
+  --chart-5: #b88158; /* secondary-400 */
 
   --radius: 0.75rem;
 
@@ -77,20 +77,25 @@
   --color-ink-warm-900: #1a1510;
 
   /* Editorial font stack */
-  --font-serif: "Fraunces", "Tiempos Headline", "Charter", "Georgia", "Cambria", "Times New Roman", serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-serif:
+    "Fraunces", "Tiempos Headline", "Charter", "Georgia", "Cambria", "Times New Roman", serif;
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
 }
 
 .dark {
-  --background: #100d0a;           /* deep warm ink */
+  --background: #100d0a; /* deep warm ink */
   --foreground: #f3efe6;
   --card: #1a1510;
   --card-foreground: #f3efe6;
   --popover: #1a1510;
   --popover-foreground: #f3efe6;
 
-  --primary: #d5814f;              /* terracotta 400 in dark */
+  --primary: #d5814f; /* terracotta 400 in dark */
   --primary-foreground: #1a0a06;
 
   --secondary: #2d261d;
@@ -185,6 +190,20 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Tailwind v4 dropped the implicit `cursor: pointer` from preflight.
+     Restore it for interactive controls so buttons, tab triggers,
+     dropdowns, switches, and any `role="button"` element feel clickable. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
 }
 
 /**
@@ -250,7 +269,10 @@ html {
 .font-serif {
   font-family: var(--font-serif);
   font-feature-settings: "ss01", "cv11", "liga", "dlig";
-  font-variation-settings: "SOFT" 30, "WONK" 0, "opsz" 96;
+  font-variation-settings:
+    "SOFT" 30,
+    "WONK" 0,
+    "opsz" 96;
   letter-spacing: -0.02em;
 }
 
@@ -274,28 +296,68 @@ html {
 /* Warm radial mesh — for hero/empty-state backdrops */
 .mesh-warm {
   background-image:
-    radial-gradient(at 18% 22%, color-mix(in oklab, var(--color-primary-300) 55%, transparent) 0, transparent 55%),
-    radial-gradient(at 82% 12%, color-mix(in oklab, var(--color-accent-300) 45%, transparent) 0, transparent 50%),
-    radial-gradient(at 75% 88%, color-mix(in oklab, var(--color-secondary-300) 40%, transparent) 0, transparent 55%),
-    radial-gradient(at 12% 85%, color-mix(in oklab, var(--color-primary-200) 55%, transparent) 0, transparent 55%);
+    radial-gradient(
+      at 18% 22%,
+      color-mix(in oklab, var(--color-primary-300) 55%, transparent) 0,
+      transparent 55%
+    ),
+    radial-gradient(
+      at 82% 12%,
+      color-mix(in oklab, var(--color-accent-300) 45%, transparent) 0,
+      transparent 50%
+    ),
+    radial-gradient(
+      at 75% 88%,
+      color-mix(in oklab, var(--color-secondary-300) 40%, transparent) 0,
+      transparent 55%
+    ),
+    radial-gradient(
+      at 12% 85%,
+      color-mix(in oklab, var(--color-primary-200) 55%, transparent) 0,
+      transparent 55%
+    );
 }
 
 .dark .mesh-warm {
   background-image:
-    radial-gradient(at 18% 22%, color-mix(in oklab, var(--color-primary-700) 50%, transparent) 0, transparent 55%),
-    radial-gradient(at 82% 12%, color-mix(in oklab, var(--color-accent-600) 45%, transparent) 0, transparent 50%),
-    radial-gradient(at 75% 88%, color-mix(in oklab, var(--color-secondary-700) 45%, transparent) 0, transparent 55%),
-    radial-gradient(at 12% 85%, color-mix(in oklab, var(--color-primary-700) 55%, transparent) 0, transparent 55%);
+    radial-gradient(
+      at 18% 22%,
+      color-mix(in oklab, var(--color-primary-700) 50%, transparent) 0,
+      transparent 55%
+    ),
+    radial-gradient(
+      at 82% 12%,
+      color-mix(in oklab, var(--color-accent-600) 45%, transparent) 0,
+      transparent 50%
+    ),
+    radial-gradient(
+      at 75% 88%,
+      color-mix(in oklab, var(--color-secondary-700) 45%, transparent) 0,
+      transparent 55%
+    ),
+    radial-gradient(
+      at 12% 85%,
+      color-mix(in oklab, var(--color-primary-700) 55%, transparent) 0,
+      transparent 55%
+    );
 }
 
 /* Dotted texture — for subtle depth */
 .surface-dotted {
-  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-ink-warm-300) 70%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--color-ink-warm-300) 70%, transparent) 1px,
+    transparent 1px
+  );
   background-size: 22px 22px;
 }
 
 .dark .surface-dotted {
-  background-image: radial-gradient(circle, color-mix(in oklab, var(--color-ink-warm-700) 80%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--color-ink-warm-700) 80%, transparent) 1px,
+    transparent 1px
+  );
 }
 
 /* Premium card — stacked soft shadow, lifts on hover */
@@ -308,7 +370,10 @@ html {
     0 1px 3px rgba(42, 19, 11, 0.05),
     0 8px 24px -12px rgba(42, 19, 11, 0.1),
     0 24px 48px -24px rgba(42, 19, 11, 0.08);
-  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .card-premium:hover {
@@ -340,7 +405,12 @@ html {
 
 /* Terracotta → amber gradient ink — for display headings */
 .ink-gradient {
-  background: linear-gradient(110deg, var(--color-primary-600) 0%, var(--color-primary-500) 35%, var(--color-accent-600) 100%);
+  background: linear-gradient(
+    110deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-500) 35%,
+    var(--color-accent-600) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -431,7 +501,9 @@ html {
 .react-flow__controls {
   background-color: var(--card);
   border-radius: 0.5rem;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 4px 14px -6px rgba(42, 19, 11, 0.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 4px 14px -6px rgba(42, 19, 11, 0.1);
   overflow: hidden;
 }
 

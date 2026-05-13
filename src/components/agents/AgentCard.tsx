@@ -17,8 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
     "bg-emerald-100 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900/60",
   running:
     "bg-emerald-100 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-900/60",
-  stopped:
-    "bg-muted text-muted-foreground border-border",
+  stopped: "bg-muted text-muted-foreground border-border",
   failed:
     "bg-red-100 text-red-700 border-red-200/80 dark:bg-red-950/50 dark:text-red-300 dark:border-red-900/60",
 };
@@ -52,7 +51,10 @@ export function AgentCard({ agent, onStart, onStop, onDelete, onClick }: AgentCa
       onClick={() => onClick(agent)}
     >
       {status === "running" && (
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent" aria-hidden />
+        <div
+          className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500 to-transparent"
+          aria-hidden
+        />
       )}
       <div className="flex items-start justify-between mb-3 gap-2">
         <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -64,7 +66,10 @@ export function AgentCard({ agent, onStart, onStop, onDelete, onClick }: AgentCa
             <p className="text-xs text-muted-foreground truncate mt-0.5">{agent.role}</p>
           </div>
         </div>
-        <Badge variant="outline" className={`text-[10px] font-medium uppercase tracking-wider border ${STATUS_COLORS[status] || ""}`}>
+        <Badge
+          variant="outline"
+          className={`text-[10px] font-medium uppercase tracking-wider border ${STATUS_COLORS[status] || ""}`}
+        >
           {status === "running" && (
             <span className="mr-1 inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           )}

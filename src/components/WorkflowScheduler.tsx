@@ -4,9 +4,10 @@
  * Allows multiple schedules per workflow with different configurations
  */
 
+import type { Agent } from "@app-types/agent";
 import type { ScheduleType, StoredAutomation } from "@app-types/automation";
 import type { WorkflowSchedule } from "@app-types/globals";
-import { Calendar, Clock, PauseCircle, PlayCircle, Plus, Trash2 } from "lucide-react";
+import { Bot, Calendar, Clock, PauseCircle, PlayCircle, Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ScheduleConfig } from "./automationBuilder/ScheduleConfig";
@@ -31,15 +32,16 @@ interface WorkflowSchedulerProps {
 
 export const WorkflowScheduler: React.FC<WorkflowSchedulerProps> = ({ automations }) => {
   const [schedules, setSchedules] = useState<WorkflowSchedule[]>([]);
+  const [agentSchedules, setAgentSchedules] = useState<Agent[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string>("");
   const [newSchedule, setNewSchedule] = useState<ScheduleType>({ type: "manual" });
   const [newEnabled, setNewEnabled] = useState(true);
   const [newHeadless, setNewHeadless] = useState(true);
 
-  // Load schedules on mount
   useEffect(() => {
     loadSchedules();
+    loadAgentSchedules();
   }, []);
 
   const loadSchedules = async () => {
@@ -50,6 +52,15 @@ export const WorkflowScheduler: React.FC<WorkflowSchedulerProps> = ({ automation
       }
     } catch (error) {
       console.error("Failed to load schedules:", error);
+    }
+  };
+
+  const loadAgentSchedules = async () => {
+    try {
+      const allAgents = (await window.electronAPI?.agents.list()) ?? [];
+      setAgentSchedules(allAgents.filter((a) => a.schedule && a.schedule.type !== "manual"));
+    } catch (error) {
+      console.error("Failed to load agent schedules:", error);
     }
   };
 
@@ -121,6 +132,27 @@ export const WorkflowScheduler: React.FC<WorkflowSchedulerProps> = ({ automation
       case "manual":
         return "Manual";
     }
+  };
+
+  const describeAgentSchedule = (schedule: Agent["schedule"]): string => {
+    if (!schedule) return "Manual";
+    if (schedule.type === "interval" && schedule.intervalMinutes) {
+      return `Every ${schedule.intervalMinutes} minutes`;
+    }
+    if (schedule.type === "cron" && schedule.expression) {
+      return `Cron: ${schedule.expression}`;
+    }
+    if (schedule.type === "once" && schedule.datetime) {
+      return `Once at ${new Date(schedule.datetime).toLocaleString()}`;
+    }
+    return schedule.type;
+  };
+
+  const workflowNamesFor = (workflowIds: string[]): string => {
+    if (!workflowIds || workflowIds.length === 0) return "—";
+    return workflowIds
+      .map((id) => automations.find((a) => a.id === id)?.name ?? `Workflow ${id}`)
+      .join(", ");
   };
 
   return (
@@ -218,8 +250,8 @@ export const WorkflowScheduler: React.FC<WorkflowSchedulerProps> = ({ automation
             <Calendar className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">No Workflow Schedules Yet</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              This tab schedules workflows directly. Agent schedules live on each agent and are
-              managed in the Agents tab — they won't appear here.
+              This tab schedules workflows directly. Schedules attached to agents appear below in a
+              read-only view — manage them from the Agents tab.
             </p>
             <Button onClick={() => setIsDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -285,6 +317,75 @@ export const WorkflowScheduler: React.FC<WorkflowSchedulerProps> = ({ automation
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Scheduled via Agents (read-only) */}
+      {agentSchedules.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <CardTitle>Scheduled via Agents</CardTitle>
+            </div>
+            <CardDescription>
+              {agentSchedules.length} agent{agentSchedules.length !== 1 ? "s" : ""} running on a
+              schedule. Manage these in the Agents tab.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Workflow</TableHead>
+                  <TableHead>Agent</TableHead>
+                  <TableHead>Schedule</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Run</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {agentSchedules.map((agent) => (
+                  <TableRow key={agent.id}>
+                    <TableCell className="font-medium">
+                      {workflowNamesFor(agent.workflowIds)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-sm">{agent.name}</span>
+                        <span className="text-xs text-muted-foreground">{agent.role}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        {describeAgentSchedule(agent.schedule)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={agent.status === "running" ? "default" : "secondary"}
+                        className={
+                          agent.status === "failed"
+                            ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                            : undefined
+                        }
+                      >
+                        {agent.status === "running"
+                          ? "Running"
+                          : agent.status === "failed"
+                            ? "Failed"
+                            : "Active"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {agent.lastRunAt ? new Date(agent.lastRunAt).toLocaleString() : "Never"}
                     </TableCell>
                   </TableRow>
                 ))}

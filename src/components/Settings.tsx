@@ -1,5 +1,5 @@
-import type { AppSettings, Credential } from "@app-types/globals";
-import { FolderOpen, Key, Moon, Settings as SettingsIcon, Sparkles, Sun } from "lucide-react";
+import type { AppFontSize, AppSettings, Credential } from "@app-types/globals";
+import { FolderOpen, Key, Moon, Settings as SettingsIcon, Sparkles, Sun, Type } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CredentialsManager } from "./CredentialsManager";
 import { Button } from "./ui/button";
@@ -24,9 +24,21 @@ const getCurrentTheme = (): "light" | "dark" | "system" => {
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 };
 
+const FONT_SIZE_PX: Record<AppFontSize, string> = {
+  small: "14px",
+  default: "16px",
+  large: "17.5px",
+  xlarge: "19px",
+};
+
+export const applyFontSize = (size: AppFontSize = "default") => {
+  document.documentElement.style.fontSize = FONT_SIZE_PX[size] ?? FONT_SIZE_PX.default;
+};
+
 export function Settings() {
   const [settings, setSettings] = useState<AppSettings>({
     theme: getCurrentTheme() as "light" | "dark" | "system",
+    fontSize: "default",
     enableNotifications: true,
     downloadPath: "",
   });
@@ -41,6 +53,7 @@ export function Settings() {
         if (savedSettings) {
           setSettings(savedSettings);
           applyTheme(savedSettings.theme);
+          applyFontSize(savedSettings.fontSize);
         }
       } catch (error) {
         console.error("Failed to load settings:", error);
@@ -66,6 +79,10 @@ export function Settings() {
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
+
+  useEffect(() => {
+    applyFontSize(settings.fontSize);
+  }, [settings.fontSize]);
 
   useEffect(() => {
     if (!loading) {
@@ -130,6 +147,42 @@ export function Settings() {
                         </div>
                       </SelectItem>
                       <SelectItem value="system">System</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="fontSize" className="text-base flex items-center gap-2">
+                      <Type className="h-4 w-4" />
+                      Font Size
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Scales the entire application UI
+                    </p>
+                  </div>
+                  <Select
+                    value={settings.fontSize ?? "default"}
+                    onValueChange={(value: AppFontSize) => {
+                      setSettings({ ...settings, fontSize: value });
+                    }}
+                  >
+                    <SelectTrigger id="fontSize" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">
+                        <span className="text-[13px]">Small</span>
+                      </SelectItem>
+                      <SelectItem value="default">
+                        <span className="text-[15px]">Default</span>
+                      </SelectItem>
+                      <SelectItem value="large">
+                        <span className="text-[16px]">Large</span>
+                      </SelectItem>
+                      <SelectItem value="xlarge">
+                        <span className="text-[17px]">Extra Large</span>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

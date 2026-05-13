@@ -99,15 +99,21 @@ export function AgentsPanel({ onOpenWorkflow }: AgentsPanelProps) {
               Agents
             </span>
             <h2 className="font-serif text-3xl leading-[1.05] tracking-tight mb-2">
-              Goal‑driven workers that{" "}
-              <em className="not-italic ink-gradient">patch themselves</em>.
+              Goal‑driven workers that <em className="not-italic ink-gradient">patch themselves</em>
+              .
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              AI agents that execute tasks using workflows, APIs, and desktop controls. Reflection rewrites failing workflows in place.
+              AI agents that execute tasks using workflows, APIs, and desktop controls. Reflection
+              rewrites failing workflows in place.
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={loadAgents} className="backdrop-blur bg-card/80">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadAgents}
+              className="backdrop-blur bg-card/80"
+            >
               <RefreshCw className="h-4 w-4 mr-1" />
               Refresh
             </Button>
@@ -130,7 +136,10 @@ export function AgentsPanel({ onOpenWorkflow }: AgentsPanelProps) {
         </div>
       ) : agents.length === 0 ? (
         <div className="relative overflow-hidden rounded-2xl border border-dashed border-border/70 py-20 text-center grain">
-          <div className="absolute inset-0 surface-dotted opacity-25 pointer-events-none" aria-hidden />
+          <div
+            className="absolute inset-0 surface-dotted opacity-25 pointer-events-none"
+            aria-hidden
+          />
           <div className="relative flex flex-col items-center">
             <div className="relative mb-5">
               <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full" aria-hidden />
@@ -141,8 +150,8 @@ export function AgentsPanel({ onOpenWorkflow }: AgentsPanelProps) {
             <h3 className="font-serif text-xl mb-2">No agents yet</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-md leading-relaxed">
               Create agents to automate complex tasks. Agents can run workflows, make API calls,
-              control your desktop, and more. You can also ask Loopi in the Chat tab to create agents
-              for you.
+              control your desktop, and more. You can also ask Loopi in the Chat tab to create
+              agents for you.
             </p>
             <Button
               onClick={() => setCreateOpen(true)}

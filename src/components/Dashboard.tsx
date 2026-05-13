@@ -110,7 +110,10 @@ export function Dashboard({
       {/* Editorial header band */}
       <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-6 sm:p-8 grain">
         <div className="absolute inset-0 mesh-warm opacity-40 pointer-events-none" aria-hidden />
-        <div className="absolute inset-0 surface-dotted opacity-20 pointer-events-none" aria-hidden />
+        <div
+          className="absolute inset-0 surface-dotted opacity-20 pointer-events-none"
+          aria-hidden
+        />
         <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
           <div className="max-w-xl">
             <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-primary mb-3">
@@ -118,8 +121,7 @@ export function Dashboard({
               Workspace
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl leading-[1.05] tracking-tight mb-2">
-              Build what you want.{" "}
-              <em className="not-italic ink-gradient">Loopi runs it.</em>
+              Build what you want. <em className="not-italic ink-gradient">Loopi runs it.</em>
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {totalAutomations === 0
@@ -136,11 +138,21 @@ export function Dashboard({
               <Plus className="h-5 w-5 mr-2" />
               Add Automation
             </Button>
-            <Button onClick={handleImportAutomation} variant="outline" size="lg" className="backdrop-blur bg-card/80">
+            <Button
+              onClick={handleImportAutomation}
+              variant="outline"
+              size="lg"
+              className="backdrop-blur bg-card/80"
+            >
               <Upload className="h-5 w-5 mr-2" />
               Import
             </Button>
-            <Button onClick={() => setAiDialogOpen(true)} variant="outline" size="lg" className="backdrop-blur bg-card/80 group">
+            <Button
+              onClick={() => setAiDialogOpen(true)}
+              variant="outline"
+              size="lg"
+              className="backdrop-blur bg-card/80 group"
+            >
               <Sparkles className="h-5 w-5 mr-2 text-primary group-hover:rotate-12 transition-transform" />
               AI Generate
             </Button>
