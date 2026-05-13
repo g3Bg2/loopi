@@ -107,8 +107,11 @@ export interface Credential {
   data: Record<string, string>;
 }
 
+export type AppFontSize = "small" | "default" | "large" | "xlarge";
+
 export interface AppSettings {
   theme: "light" | "dark" | "system";
+  fontSize?: AppFontSize;
   enableNotifications: boolean;
   downloadPath?: string;
   debugMode?: boolean;

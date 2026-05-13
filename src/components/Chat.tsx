@@ -1424,7 +1424,10 @@ export function Chat() {
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {messages.length === 0 && (
           <div className="relative flex items-center justify-center h-full grain overflow-hidden">
-            <div className="absolute inset-0 mesh-warm opacity-30 pointer-events-none" aria-hidden />
+            <div
+              className="absolute inset-0 mesh-warm opacity-30 pointer-events-none"
+              aria-hidden
+            />
             <div className="relative text-center space-y-4 max-w-md px-6">
               <div className="relative mx-auto w-16 h-16">
                 <div className="absolute inset-0 bg-primary/25 blur-2xl rounded-full" aria-hidden />
